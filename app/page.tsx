@@ -1,65 +1,109 @@
-import Image from "next/image";
+import { fetchAllEvents } from '@/lib/scraper';
+import EventCalendar from '@/components/EventCalendar';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  let scrapedEvents = [];
+  try {
+    scrapedEvents = await fetchAllEvents();
+  } catch (error) {
+    console.error("Scraper Error:", error);
+    scrapedEvents = [];
+  }
+
+  // Manual events to add
+  const manualEvents = [
+    // February 2026
+    {
+      id: 'lalaland-feb14',
+      title: 'La La Land in Concert',
+      date: '2026-02-14',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/la-la-land-in-concert-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1755187454/LaLaLand_Event_Hero_1920x853/LaLaLand_Event_Hero_1920x853.png?_i=AA'
+    },
+    {
+      id: 'mnozil-brass-feb27',
+      title: 'Mnozil Brass: Strau$$',
+      date: '2026-02-27',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/mnozil-brass-2026-bates-recital-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA'
+    },
+    {
+      id: 'balourdet-feb27',
+      title: 'Balourdet Quartet',
+      date: '2026-02-27',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/balourdet-quartet-2026-kfma-studio-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1749074351/BalourdetQuartet_Event_Hero_1920x853/BalourdetQuartet_Event_Hero_1920x853.png?_i=AA'
+    },
+    {
+      id: 'harry-potter-feb28',
+      title: 'Harry Potter and the Prisoner of Azkaban™ in Concert',
+      date: '2026-02-28',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/harry-potter-and-the-prisoner-of-azkaban-in-concert-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1741639783/HP3_AUSTIN_VENUE_1920x853_Event-Page-Slider_2SHOW/HP3_AUSTIN_VENUE_1920x853_Event-Page-Slider_2SHOW.png?_i=AA'
+    },
+    {
+      id: 'balourdet-feb28',
+      title: 'Balourdet Quartet',
+      date: '2026-02-28',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/balourdet-quartet-2026-first-unitarian-church-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1749074351/BalourdetQuartet_Event_Hero_1920x853/BalourdetQuartet_Event_Hero_1920x853.png?_i=AA'
+    },
+    // March 2026
+    {
+      id: 'puscifer-mar24',
+      title: 'Puscifer - The Normal Isn\'t Tour',
+      date: '2026-03-24',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/puscifer-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1760735862/Puscifer_Event_Hero_1920x853/Puscifer_Event_Hero_1920x853.png?_i=AA'
+    },
+    // April 2026
+    {
+      id: 'lang-lang-apr4',
+      title: 'An Evening with Lang Lang',
+      date: '2026-04-04',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/lang-lang-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1763135590/LangLang_Event_Hero_1920x853-3/LangLang_Event_Hero_1920x853-3.png?_i=AA'
+    },
+    // May 2026
+    {
+      id: 'rhiannon-giddens-may2',
+      title: 'Rhiannon Giddens',
+      date: '2026-05-02',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/rhiannon-giddens-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1756828934/RhiannonGiddens_Event_Hero_1920x853-1/RhiannonGiddens_Event_Hero_1920x853-1.png?_i=AA'
+    },
+    // June 2026
+    {
+      id: 'lotr-jun12',
+      title: 'The Lord of the Rings: The Fellowship of the Ring in Concert',
+      date: '2026-06-12',
+      venue: 'Texas Performing Arts',
+      link: 'https://texasperformingarts.org/event/lotr-fotr-2026-bass-concert-hall-austin-texas/',
+      image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1762383104/LOTR_Event_Hero_1920x853-1/LOTR_Event_Hero_1920x853-1.png?_i=AA'
+    }
+  ];
+
+  // Filter out Widespread Panic 2-day ticket event and combine with manual events
+  const filteredScrapedEvents = scrapedEvents.filter(event =>
+    !event.title.includes('Widespread Panic: 2 Day Ticket')
+  );
+
+  // Combine scraped and manual events
+  const allEvents = [...filteredScrapedEvents, ...manualEvents];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen font-sans bg-background selection:bg-accent selection:text-white transition-colors duration-300">
+      <EventCalendar initialEvents={allEvents} />
     </div>
   );
 }
