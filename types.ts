@@ -7,6 +7,8 @@ export interface User {
   bio: string;
   photo: string;
   topArtists: string[];
+  interests: string[];
+  attendingEvent: string;
 }
 
 export interface ConcertEvent {

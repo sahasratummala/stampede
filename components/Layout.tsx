@@ -1,9 +1,11 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const { profile } = useUser();
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -28,12 +30,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-center space-x-4">
               <div className="flex flex-col items-end mr-2">
                 <span className="text-xs text-gray-500">UT Student ID</span>
-                <span className="text-sm font-medium">B. Longhorn</span>
+                <span className="text-sm font-medium">{profile.name.split(' ')[0][0]}. {profile.name.split(' ').slice(1).join(' ')}</span>
               </div>
               <img 
-                src="https://picsum.photos/32/32" 
+                src={profile.photo} 
                 alt="Profile" 
-                className="w-10 h-10 rounded-full border-2 border-burnt-orange p-0.5"
+                className="w-10 h-10 rounded-full border-2 border-burnt-orange p-0.5 object-cover"
               />
             </div>
           </div>
