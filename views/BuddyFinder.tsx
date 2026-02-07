@@ -3,7 +3,7 @@ import { MOCK_BUDDIES, CONCERT_MOODS, AVAILABLE_PROMPTS } from '../constants';
 import { User, UserPrompt } from '../types';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
-import { getAllEventNames } from '../services/geminiService';
+import { getAllEventNames, generateBuddyResponse } from '../services/geminiService';
 
 interface Message {
   id: string;
@@ -99,26 +99,9 @@ const BuddyFinder: React.FC = () => {
   };
 
   // Expanded and randomized response logic
-  const getDynamicReplies = (buddy: User) => {
-    const pool = [
-      `Oh that's awesome! I've been waiting for this tour since they announced it.`,
-      `Hook 'em! 🤘 Are you planning on getting to the floor early?`,
-      `I actually saw them last time they were in Austin, it was spiritual. You're gonna love it!`,
-      `Definitely! By the way, do you know what the parking situation is like at Moody for this one?`,
-      `Nice! I'm trying to decide between the pit or just getting a seat. What's your vibe?`,
-      `I literally have their latest album on repeat right now. My roommates are probably tired of it haha.`,
-      `The production on this tour looks insane from the TikToks I've seen.`,
-      `I'm mostly going for the opener, but obviously stoked for the main set too!`,
-      `Are you planning on getting any merch? I heard the line gets crazy at Moody.`,
-      `I'm actually a ${buddy.major} major too! Small world. We should definitely meet up at the show.`
-    ];
-    
-    // Shuffle and pick 2
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 2);
-  };
+  // Removed: getDynamicReplies - now using AI-powered responses via generateBuddyResponse
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !chattingWith) return;
 
     const currentChattingId = chattingWith.id;
@@ -136,44 +119,57 @@ const BuddyFinder: React.FC = () => {
 
     setNewMessage('');
 
-    // Trigger sequential replies
-    const [reply1, reply2] = getDynamicReplies(chattingWith);
+    // Build conversation history for context
+    const currentHistory = chatHistories[currentChattingId] || [];
+    const conversationHistory = currentHistory.map(msg => ({
+      role: msg.senderId === 'me' ? 'user' : 'buddy',
+      content: msg.text
+    }));
 
-    // Reply 1 Sequence
+    // Simulate typing indicator
     setTimeout(() => {
       setIsTyping(true);
+    }, 300);
+
+    try {
+      // Generate AI response using Gemini
+      const buddyResponse = await generateBuddyResponse(
+        userMessage.text,
+        chattingWith,
+        myProfile,
+        conversationHistory
+      );
+
       setTimeout(() => {
-        const buddyReply1: Message = {
+        const buddyReply: Message = {
           id: generateMsgId(),
           senderId: currentChattingId,
-          text: reply1,
+          text: buddyResponse,
           timestamp: new Date()
         };
         setChatHistories(prev => ({
           ...prev,
-          [currentChattingId]: [...(prev[currentChattingId] || []), buddyReply1]
+          [currentChattingId]: [...(prev[currentChattingId] || []), buddyReply]
         }));
         setIsTyping(false);
-
-        // Reply 2 Sequence
-        setTimeout(() => {
-          setIsTyping(true);
-          setTimeout(() => {
-            const buddyReply2: Message = {
-              id: generateMsgId(),
-              senderId: currentChattingId,
-              text: reply2,
-              timestamp: new Date()
-            };
-            setChatHistories(prev => ({
-              ...prev,
-              [currentChattingId]: [...(prev[currentChattingId] || []), buddyReply2]
-            }));
-            setIsTyping(false);
-          }, 1800);
-        }, 800);
-      }, 1500);
-    }, 400);
+      }, 1200);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      // Fallback response if AI fails
+      setTimeout(() => {
+        const fallbackReply: Message = {
+          id: generateMsgId(),
+          senderId: currentChattingId,
+          text: "That's awesome! Let me think about that...",
+          timestamp: new Date()
+        };
+        setChatHistories(prev => ({
+          ...prev,
+          [currentChattingId]: [...(prev[currentChattingId] || []), fallbackReply]
+        }));
+        setIsTyping(false);
+      }, 1200);
+    }
   };
 
   const [filterEvent, setFilterEvent] = useState<string>('');
@@ -187,7 +183,7 @@ const BuddyFinder: React.FC = () => {
     return MOCK_BUDDIES.filter(buddy => {
       const matchEvent = !filterEvent || buddy.attendingEvent === filterEvent;
       const matchMajor = !filterMajor || buddy.major === filterMajor;
-      const matchInterest = !filterInterest || 
+      const matchInterest = !filterInterest ||
         buddy.interests.some(i => i.toLowerCase().includes(filterInterest.toLowerCase())) ||
         buddy.topArtists.some(a => a.toLowerCase().includes(filterInterest.toLowerCase()));
       return matchEvent && matchMajor && matchInterest;
@@ -201,7 +197,7 @@ const BuddyFinder: React.FC = () => {
   const handleSwipe = (direction: 'left' | 'right') => {
     if (swiped || filteredBuddies.length === 0) return;
     setSwiped(direction);
-    
+
     const swipedUser = filteredBuddies[currentIndex];
 
     if (direction === 'right') {
@@ -211,7 +207,7 @@ const BuddyFinder: React.FC = () => {
           if (prev.find(m => m.id === swipedUser.id)) return prev;
           return [...prev, swipedUser];
         });
-        
+
         if (!chatHistories[swipedUser.id]) {
           setChatHistories(prev => ({
             ...prev,
@@ -429,14 +425,14 @@ const BuddyFinder: React.FC = () => {
                 </div>
               </div>
               <div className="absolute -bottom-20 left-0 right-0 flex justify-center items-center gap-28">
-                <button 
-                  onClick={() => handleSwipe('left')} 
+                <button
+                  onClick={() => handleSwipe('left')}
                   className="w-14 h-14 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-500 hover:scale-125 transition-all duration-300 active:scale-90 group"
                 >
                   <i className="fas fa-times text-xl group-hover:rotate-90 transition-transform duration-300"></i>
                 </button>
-                <button 
-                  onClick={() => handleSwipe('right')} 
+                <button
+                  onClick={() => handleSwipe('right')}
                   className="w-14 h-14 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center text-burnt-orange hover:scale-125 hover:shadow-burnt-orange/20 transition-all duration-300 active:scale-90 group"
                 >
                   <i className="fas fa-heart text-xl group-hover:animate-pulse"></i>
@@ -500,7 +496,7 @@ const BuddyFinder: React.FC = () => {
               <p className="text-[10px] opacity-70 truncate">{chattingWith.attendingEvent}</p>
             </div>
             <div className="ml-auto flex items-center gap-3">
-               <button onClick={(e) => triggerRemoveMatch(e, chattingWith)} className="text-white/40 hover:text-red-400 transition"><i className="fas fa-trash-alt"></i></button>
+              <button onClick={(e) => triggerRemoveMatch(e, chattingWith)} className="text-white/40 hover:text-red-400 transition"><i className="fas fa-trash-alt"></i></button>
             </div>
           </div>
           <div ref={messagesContainerRef} className="flex-grow p-6 overflow-y-auto bg-gray-50 space-y-4 scroll-smooth">

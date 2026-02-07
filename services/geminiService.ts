@@ -170,3 +170,64 @@ export const analyzeOutfit = async (imageBase64: string, artistName: string): Pr
     return handleApiError(e);
   }
 };
+
+/**
+ * Generates an AI-powered chatbot response from a concert buddy based on context.
+ */
+export const generateBuddyResponse = async (
+  userMessage: string,
+  buddyProfile: any,
+  userProfile: any,
+  conversationHistory: Array<{ role: string; content: string }> = []
+): Promise<string> => {
+  try {
+    const conversationContext = conversationHistory
+      .slice(-4) // Keep last 4 messages for context
+      .map((msg) => `${msg.role === 'user' ? 'User' : 'Buddy'}: ${msg.content}`)
+      .join('\n');
+
+    const prompt = `You are a friendly concert-going college student at UT Austin. You're chatting with another student about attending a concert together.
+
+BUDDY PROFILE:
+- Name: ${buddyProfile.name}
+- Major: ${buddyProfile.major}
+- Concert Mood: ${buddyProfile.concertMood || 'Not specified'}
+- Top Artists: ${buddyProfile.topArtists.join(', ')}
+- Interests: ${buddyProfile.interests.join(', ')}
+- Attending: ${buddyProfile.attendingEvent}
+- Bio: ${buddyProfile.bio}
+
+THE OTHER PERSON:
+- Name: ${userProfile.name}
+- Major: ${userProfile.major}
+- Top Artists: ${userProfile.topArtists.join(', ')}
+- Interests: ${userProfile.interests.join(', ')}
+
+RECENT CONVERSATION:
+${conversationContext}
+
+USER JUST SAID: "${userMessage}"
+
+Generate ONE natural, enthusiastic response (1-2 sentences max) from ${buddyProfile.name}'s perspective. 
+Be authentic to their personality, reference shared interests if relevant, and keep it conversational like a real college student texting.
+Do NOT include any labels, quotes, or formatting - just the raw message text.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt
+    });
+
+    const text = response.text?.trim() || "That sounds awesome! Let's meet up!";
+    return text;
+  } catch (e) {
+    // Fallback responses if API fails
+    const fallbacks = [
+      "That sounds amazing! 🎵",
+      "Yeah, I'm hyped too!",
+      "Dude, so down for that",
+      "Hook 'em! 🤘",
+      "Facts facts facts"
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+};
