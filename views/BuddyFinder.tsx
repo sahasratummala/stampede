@@ -348,7 +348,8 @@ const BuddyFinder: React.FC = () => {
                   <div className="absolute bottom-6 left-6 right-6 text-white">
                     <div className="flex items-baseline gap-2">
                       <h3 className="text-3xl font-bold">{currentUser.name}</h3>
-                      <span className="text-xl opacity-90">21</span>
+                      {currentUser.pronouns && <span className="text-xs font-medium opacity-70">({currentUser.pronouns})</span>}
+                      <span className="text-xl opacity-90 ml-auto">21</span>
                     </div>
                     <p className="text-sm font-medium opacity-90">{currentUser.major} @ UT Austin</p>
                   </div>
@@ -414,7 +415,7 @@ const BuddyFinder: React.FC = () => {
                   </div>
                   <div className="flex-grow">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-gray-900">{match.name}</h4>
+                      <h4 className="font-bold text-gray-900">{match.name} {match.pronouns && <span className="text-[10px] font-normal text-gray-400">({match.pronouns})</span>}</h4>
                       <button 
                         onClick={(e) => triggerRemoveMatch(e, match)}
                         className="text-gray-300 hover:text-red-500 p-1 transition-colors"
@@ -535,15 +536,19 @@ const BuddyFinder: React.FC = () => {
                 <input type="text" value={tempProfile.name} onChange={(e) => setTempProfile(prev => ({ ...prev, name: e.target.value }))} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-medium" />
               </div>
               <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Pronouns</label>
+                <input type="text" value={tempProfile.pronouns || ''} onChange={(e) => setTempProfile(prev => ({ ...prev, pronouns: e.target.value }))} placeholder="e.g. they/them" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-medium" />
+              </div>
+              <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Major</label>
                 <input type="text" value={tempProfile.major} onChange={(e) => setTempProfile(prev => ({ ...prev, major: e.target.value }))} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-medium" />
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Upcoming Event I'm Attending</label>
-              <div className="relative">
-                <i className="fas fa-ticket-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="text" value={tempProfile.attendingEvent} onChange={(e) => setTempProfile(prev => ({ ...prev, attendingEvent: e.target.value }))} placeholder="e.g. Billie Eilish @ Moody Center" className="w-full pl-10 pr-4 py-3 bg-orange-50/30 border border-orange-100 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-bold text-burnt-orange" />
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Upcoming Event I'm Attending</label>
+                <div className="relative">
+                  <i className="fas fa-ticket-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                  <input type="text" value={tempProfile.attendingEvent} onChange={(e) => setTempProfile(prev => ({ ...prev, attendingEvent: e.target.value }))} placeholder="e.g. Billie Eilish @ Moody" className="w-full pl-10 pr-4 py-3 bg-orange-50/30 border border-orange-100 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-bold text-burnt-orange" />
+                </div>
               </div>
             </div>
             <div>
