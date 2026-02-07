@@ -39,6 +39,7 @@ const BuddyFinder: React.FC = () => {
 
   // Draft profile state (Current Edits)
   const [tempProfile, setTempProfile] = useState<User>({ ...myProfile });
+  const [validationError, setValidationError] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -256,6 +257,11 @@ const BuddyFinder: React.FC = () => {
   };
 
   const handleSaveChanges = () => {
+    if (!tempProfile.name.trim()) {
+      setValidationError('Display name is required');
+      return;
+    }
+    setValidationError('');
     updateProfile({ ...tempProfile });
     setIsSaved(true);
     setTimeout(() => {
@@ -264,6 +270,11 @@ const BuddyFinder: React.FC = () => {
   };
 
   const confirmNavigateAndSave = () => {
+    if (!tempProfile.name.trim()) {
+      setValidationError('Display name is required');
+      return;
+    }
+    setValidationError('');
     updateProfile({ ...tempProfile });
     if (pendingView) setView(pendingView);
     setShowUnsavedModal(false);
@@ -549,7 +560,8 @@ const BuddyFinder: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Display Name</label>
-                <input type="text" value={tempProfile.name} onChange={(e) => setTempProfile(prev => ({ ...prev, name: e.target.value }))} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-medium" />
+                <input type="text" value={tempProfile.name} onChange={(e) => { setTempProfile(prev => ({ ...prev, name: e.target.value })); setValidationError(''); }} className={`w-full p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-burnt-orange outline-none text-sm font-medium ${validationError ? 'border-red-500 focus:ring-red-300' : 'border-gray-200'}`} />
+                {validationError && <p className="text-red-500 text-xs font-bold mt-1">{validationError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Concert Mood</label>
