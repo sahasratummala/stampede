@@ -1,65 +1,49 @@
-import Image from "next/image";
+"use client";
+import Link from "next/link";
+import { Music, Zap, Users, Star } from "lucide-react";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-black text-white selection:bg-orange-500">
+      {/* Hero Section */}
+      <main className="flex flex-col items-center justify-center pt-32 pb-20 px-6 text-center">
+        <div className="inline-block bg-orange-600/10 border border-orange-500/20 px-4 py-1 rounded-full text-orange-500 text-[10px] font-black uppercase tracking-[0.3em] mb-8 animate-pulse">
+          Live at UT Austin
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        
+        <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter leading-none mb-6">
+          STAMPEDE
+        </h1>
+        
+        <p className="max-w-xl text-zinc-500 text-lg md:text-xl font-medium mb-12 leading-relaxed">
+          The underground heartbeat of the Forty Acres. 
+          Connect with local artists, find house shows, and join the herd.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+          <Link href="/login" className="flex-1 bg-white text-black font-black py-5 rounded-2xl hover:bg-orange-500 hover:text-white transition-all text-center text-lg italic uppercase tracking-tighter">
+            Join the Herd
+          </Link>
+          <Link href="/login" className="flex-1 bg-zinc-900 border border-white/10 text-white font-black py-5 rounded-2xl hover:bg-zinc-800 transition-all text-center text-lg italic uppercase tracking-tighter">
+            Sign In
+          </Link>
         </div>
       </main>
+
+      {/* Feature Grid */}
+      <section className="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          { icon: <Music />, title: "Discover", desc: "Swipe through UT's rising stars." },
+          { icon: <Zap />, title: "Live", desc: "Find the best house shows tonight." },
+          { icon: <Users />, title: "Connect", desc: "For Longhorns, by Longhorns." }
+        ].map((feat, i) => (
+          <div key={i} className="bg-zinc-900/50 p-8 rounded-[2.5rem] border border-white/5 hover:border-orange-500/50 transition-colors">
+            <div className="text-orange-500 mb-4">{feat.icon}</div>
+            <h3 className="font-black uppercase italic text-xl mb-2">{feat.title}</h3>
+            <p className="text-zinc-500 text-sm">{feat.desc}</p>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }
