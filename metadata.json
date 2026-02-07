@@ -1,0 +1,8 @@
+
+{
+  "name": "Moody Students - UT Austin Concert Hub",
+  "description": "An exclusive social and event platform for UT Austin students attending Moody Center events, featuring an AI outfit recommender and a 'Concert Buddy' matching system.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
