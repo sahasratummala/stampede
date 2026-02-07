@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
+/* 1. FORCE LIGHT MODE DEFAULT */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #09090b;
+  /* Black text */
+  --card: #f4f4f5;
+  /* Light gray card */
+  --border: #e4e4e7;
+  /* Light border */
+  --muted: #71717a;
+  /* Gray text */
+  --accent: #f44800;
+  /* Stampede Orange */
+}
+
+/* 2. DARK MODE (Only if .dark class is added) */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  /* White text */
+  --card: #18181b;
+  /* Dark card */
+  --border: #27272a;
+  /* Dark border */
+  --muted: #a1a1aa;
+  /* Gray text */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
