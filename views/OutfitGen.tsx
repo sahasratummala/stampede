@@ -8,6 +8,7 @@ const OutfitGen: React.FC = () => {
   const [image, setImage] = useState<string | null>(null);
   const [artist, setArtist] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
   const [trends, setTrends] = useState<{text: string, sources: any[]} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +27,7 @@ const OutfitGen: React.FC = () => {
   const handleAnalyze = async () => {
     if (!artist) return;
     setLoading(true);
+    setError(null);
     try {
       const trendPromise = getOutfitTrends(artist);
       let analysisPromise = null;
@@ -39,7 +41,12 @@ const OutfitGen: React.FC = () => {
       
       setTrends(trendRes);
       if (analysisRes) setSuggestion(analysisRes);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message === 'QUOTA_EXCEEDED') {
+        setError("Rate limit exceeded. Please wait a moment and try again.");
+      } else {
+        setError("Something went wrong while generating recommendations.");
+      }
       console.error(e);
     } finally {
       setLoading(false);
@@ -52,6 +59,13 @@ const OutfitGen: React.FC = () => {
         <h2 className="text-4xl font-bebas text-burnt-orange mb-4 tracking-wider">Mood Style Engine</h2>
         <p className="text-gray-600">Combine your wardrobe with real-time tour trends to find the perfect concert fit.</p>
       </div>
+
+      {error && (
+        <div className="max-w-2xl mx-auto mb-8 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
+          <i className="fas fa-exclamation-circle text-lg"></i>
+          {error}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Step 1 & 2: Input */}

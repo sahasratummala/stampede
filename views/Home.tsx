@@ -10,12 +10,14 @@ const Home: React.FC = () => {
   const [moodyGrounding, setMoodyGrounding] = useState<any[]>([]);
   const [butlerGrounding, setButlerGrounding] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'Moody' | 'Butler'>('Moody');
   const [selectedArtist, setSelectedArtist] = useState<{name: string, info: string, sources: any[]} | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const [moodyRes, butlerRes] = await Promise.all([
         getUpcomingEvents('Moody Center'),
         getUpcomingEvents('Butler School of Music')
@@ -24,15 +26,32 @@ const Home: React.FC = () => {
       setMoodyGrounding(moodyRes.grounding);
       setButlerEvents(butlerRes.events);
       setButlerGrounding(butlerRes.grounding);
+    } catch (e: any) {
+      if (e.message === 'QUOTA_EXCEEDED') {
+        setError("Rate limit exceeded. Please wait a moment and try again.");
+      } else {
+        setError("Failed to load events. Please try again later.");
+      }
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
   const handleLearnMore = async (artist: string) => {
     setSelectedArtist({ name: artist, info: 'Loading artist profile...', sources: [] });
-    const info = await getArtistInfo(artist);
-    setSelectedArtist({ name: artist, info: info.text || 'No info found.', sources: info.sources });
+    try {
+      const info = await getArtistInfo(artist);
+      setSelectedArtist({ name: artist, info: info.text || 'No info found.', sources: info.sources });
+    } catch (e: any) {
+      const msg = e.message === 'QUOTA_EXCEEDED' 
+        ? "Rate limit exceeded. Please try again in a few seconds." 
+        : "Failed to load artist info.";
+      setSelectedArtist({ name: artist, info: msg, sources: [] });
+    }
   };
 
   const currentEvents = activeTab === 'Moody' ? moodyEvents : butlerEvents;
@@ -76,12 +95,27 @@ const Home: React.FC = () => {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mb-10 p-6 bg-red-50 border border-red-100 rounded-2xl flex flex-col items-center text-center">
+          <i className="fas fa-exclamation-triangle text-red-400 text-3xl mb-4"></i>
+          <h4 className="text-lg font-bold text-gray-900 mb-2">Oops! Something went wrong</h4>
+          <p className="text-red-600 text-sm mb-6">{error}</p>
+          <button 
+            onClick={fetchData}
+            className="px-6 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Event Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-80 bg-gray-200 animate-pulse rounded-2xl"></div>)}
         </div>
-      ) : (
+      ) : !error && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {currentEvents.map(event => (
