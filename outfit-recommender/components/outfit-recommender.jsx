@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, Sparkles, Sun, CheckCircle, AlertCircle, ThermometerSun, Search, ChevronDown, Calendar, MapPin, X, ArrowRight } from 'lucide-react';
 
-const OutfitRecommender = ({ event: initialEvent }) => {
+const OutfitRecommender = ({ event: initialEvent = null } = {}) => {
   // --- CONFIGURATION ---
   const UT_ORANGE = "bg-[#BF5700]";
   const UT_ORANGE_TEXT = "text-[#BF5700]";
@@ -25,7 +25,7 @@ const OutfitRecommender = ({ event: initialEvent }) => {
 
   // --- 0. BROWSER TITLE FIX ---
   useEffect(() => {
-    document.title = "FitCheck";
+    document.title = "Fit Check";
   }, []);
 
   // --- 1. FETCH EVENTS ON LOAD ---
@@ -57,20 +57,10 @@ const OutfitRecommender = ({ event: initialEvent }) => {
     fetchEvents();
   }, []);
 
-  // --- 2. FETCH REAL WEATHER ON LOAD (FIXED) ---
-  useEffect(() => {
-    const initWeather = async () => {
-        const w = await getWeather();
-        if (w) setWeather(w);
-    };
-    initWeather();
-  }, []);
-
   // --- API HANDLERS ---
   const getWeather = async () => {
     try {
-      // NOTE: This now points to your fixed backend API
-      const response = await fetch('/api/weather'); 
+      const response = await fetch('/api/weather');
       if (!response.ok) throw new Error('Weather fetch failed');
       return await response.json();
     } catch (error) {
@@ -403,7 +393,7 @@ const OutfitRecommender = ({ event: initialEvent }) => {
         {/* --- HEADER --- */}
         <div className="mb-10 text-center lg:text-left">
           <h2 className="text-6xl md:text-7xl lg:text-8xl font-black italic tracking-tighter uppercase leading-none text-black">
-            FITCHECK
+            FIT CHECK
           </h2>
         </div>
 
