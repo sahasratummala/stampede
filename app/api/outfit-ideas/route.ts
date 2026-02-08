@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const API_KEY = process.env.SERPAPI_KEY; 
+    const API_KEY = process.env.NEXT_PUBLIC_SERPAPI_KEY; 
 
     if (!API_KEY) {
       console.error("❌ ERROR: SERPAPI_KEY is missing.");

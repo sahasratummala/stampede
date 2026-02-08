@@ -3,7 +3,7 @@ import axios from 'axios';
 
 export async function GET() {
   try {
-    const apiKey = process.env.SERPAPI_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_SERPAPI_KEY;
     
     // We search for events at your specific venues
     const query = "concerts at Moody Center Austin and Butler School of Music";
