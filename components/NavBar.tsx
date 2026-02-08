@@ -60,14 +60,8 @@ export default function NavBar({ isDark, toggleTheme }: NavBarProps) {
                                 </svg>
                             )}
                         </button>
-
-                        {/* LOGIN/SIGNUP */}
-                        <a
-                            href="/login"
-                            className="px-8 py-3 bg-accent text-black font-black text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition-all border-2 border-accent shadow-md hover:shadow-xl"
-                        >
-                            Login
-                        </a>
+                        
+                        {/* LOGIN BUTTON REMOVED FROM HERE */}
                     </div>
 
                     {/* MOBILE MENU BUTTON */}
@@ -119,13 +113,8 @@ export default function NavBar({ isDark, toggleTheme }: NavBarProps) {
                                     </svg>
                                 )}
                             </button>
-
-                            <a
-                                href="/login"
-                                className="flex-1 px-6 py-3 bg-accent text-black font-black text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition-all border-2 border-accent text-center shadow-md"
-                            >
-                                Login
-                            </a>
+                            
+                            {/* LOGIN BUTTON REMOVED FROM MOBILE VIEW TOO */}
                         </div>
                     </div>
                 )}

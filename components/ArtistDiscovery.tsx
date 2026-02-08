@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Heart, X, Music, Loader2, Sparkles } from "lucide-react"; // Added Sparkles for AI vibe
+import { Heart, X, Music, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function ArtistDiscovery() {
   const router = useRouter();
   const [artists, setArtists] = useState<any[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
   const [isAiSorting, setIsAiSorting] = useState(false);
   const [direction, setDirection] = useState<string | null>(null);
@@ -16,35 +16,51 @@ export default function ArtistDiscovery() {
   useEffect(() => {
     async function init() {
       setLoading(true);
-      
-      // 1. Get User
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
 
-      // 2. Fetch Listener Profile & All Artists
       const { data: listenerData } = await supabase.from('listeners').select('*').eq('id', user?.id).single();
       const { data: allArtists } = await supabase.from('artists').select('*');
 
       if (allArtists && listenerData) {
         setIsAiSorting(true);
         try {
-          // 3. Call our AI Route
           const response = await fetch("/api/recommend", {
             method: "POST",
             body: JSON.stringify({ listener: listenerData, artists: allArtists }),
           });
-          const rankedIds = await response.json();
+          
+          const data = await response.json();
+          // Ensure rawText is a string even if API fails
+          const rawText = data.text || "";
+          let rankedIds: string[] = [];
 
-          // 4. Sort artists based on the AI's list
+          if (rawText) {
+            try {
+              // Clean out markdown backticks if AI added them
+              const cleaned = rawText.replace(/```json|```/g, "").trim();
+              const parsed = JSON.parse(cleaned);
+              rankedIds = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+              // Fallback for raw comma-separated lists
+              rankedIds = rawText.split(',').map((s: string) => s.trim());
+            }
+          }
+
           const sortedArtists = [...allArtists].sort((a, b) => {
-            return rankedIds.indexOf(a.id) - rankedIds.indexOf(b.id);
+            const indexA = rankedIds.indexOf(a.id);
+            const indexB = rankedIds.indexOf(b.id);
+            const posA = indexA === -1 ? 999 : indexA;
+            const posB = indexB === -1 ? 999 : indexB;
+            return posA - posB;
           });
 
-          // Reverse it because the "stack" shows the LAST item first in the UI
-          setArtists(sortedArtists.reverse());
-          setCurrentIndex(sortedArtists.length - 1);
+          // Reverse for the stack: last item in array is top of deck
+          const reversed = sortedArtists.reverse();
+          setArtists(reversed);
+          setCurrentIndex(reversed.length - 1);
         } catch (err) {
-          console.error("AI Sort failed, using default order", err);
+          console.error("Discovery Error:", err);
           setArtists(allArtists);
           setCurrentIndex(allArtists.length - 1);
         }
@@ -55,14 +71,15 @@ export default function ArtistDiscovery() {
     init();
   }, []);
 
-  // ... (Keep handleSwipe the same as your previous version)
   const handleSwipe = async (dir: 'left' | 'right') => {
+    if (currentIndex < 0) return;
     const currentArtist = artists[currentIndex];
     setDirection(dir);
+
     if (dir === 'right' && currentArtist?.id && currentUserId) {
-      const { error } = await supabase.from('follows').insert([{ follower_id: currentUserId, artist_id: currentArtist.id }]);
-      if (error && error.code !== '23505') console.error(error.message);
+      await supabase.from('follows').insert([{ follower_id: currentUserId, artist_id: currentArtist.id }]);
     }
+
     setTimeout(() => {
       setDirection(null);
       setCurrentIndex(prev => prev - 1);
@@ -81,11 +98,11 @@ export default function ArtistDiscovery() {
     </div>
   );
 
-  if (currentIndex < 0) return (
+  if (currentIndex < 0 || !artists[currentIndex]) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center text-zinc-500 font-bold uppercase tracking-widest gap-4">
       <Music size={40} className="text-zinc-800" />
       <p>No more artists in Austin today.</p>
-      <button onClick={() => window.location.reload()} className="text-orange-500 text-xs mt-4 underline">Refresh Feed</button>
+      <button onClick={() => window.location.reload()} className="text-orange-500 text-xs underline">Refresh</button>
     </div>
   );
 
@@ -101,17 +118,16 @@ export default function ArtistDiscovery() {
         </div>
       </div>
       
-      {/* ... (Keep the Card UI and Swipe buttons the same as before) */}
       <div className="relative w-full max-w-[400px] h-[600px]">
-        <div className={`absolute inset-0 bg-zinc-900 rounded-[3rem] overflow-hidden border border-white/10 transition-all duration-500 transform 
+        <div key={artist.id} className={`absolute inset-0 bg-zinc-900 rounded-[3rem] overflow-hidden border border-white/10 transition-all duration-500 transform 
           ${direction === 'left' ? '-translate-x-[150%] rotate-[-20deg] opacity-0' : direction === 'right' ? 'translate-x-[150%] rotate-[20deg] opacity-0' : ''}`}>
           
-          <img src={artist.coverImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="Cover" />
+          <img src={artist.coverImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
           
           <div className="absolute bottom-0 p-8 w-full">
             <div className="flex items-center gap-4 mb-4">
-              <img src={artist.profileImageUrl} className="w-20 h-20 rounded-2xl border-4 border-black object-cover" alt="Profile" />
+              <img src={artist.profileImageUrl} className="w-20 h-20 rounded-2xl border-4 border-black object-cover bg-zinc-800" alt="" />
               <div>
                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">{artist.name}</h2>
                 <p className="text-orange-500 font-bold text-[10px] uppercase tracking-widest">{artist.genre}</p>
