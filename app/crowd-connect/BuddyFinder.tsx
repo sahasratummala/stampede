@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Users, Heart, User as UserIcon, X, GraduationCap, 
-  Loader2, Plus, Camera, Sparkles, Music, Send, ChevronLeft
+  Loader2, Plus, Camera, Sparkles, Send, ChevronLeft
 } from 'lucide-react';
 import { supabase } from "@/lib/supabase";
 
@@ -69,7 +69,9 @@ const ProfileEditor = ({ formData, setFormData, handleSaveProfile, isSaving }: a
           <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-muted ml-2">Major</label>
           <div className="relative">
             <input type="text" placeholder="WHAT DO YOU STUDY?" value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})} className="w-full bg-card border-2 border-border rounded-2xl px-6 py-5 font-bold text-foreground outline-none focus:border-accent transition-all uppercase placeholder:text-muted" />
-            <GraduationCap className="absolute right-5 top-1/2 -translate-y-1/2 text-accent" />
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-accent">
+              <GraduationCap size={20} />
+            </span>
           </div>
 
           <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-muted ml-2">Bio / Vibe</label>
@@ -109,16 +111,45 @@ export default function CrowdConnect() {
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Chat State
+  // Chat/Profile State
   const [chatBuddy, setChatBuddy] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [msgInput, setMsgInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
-
   const [formData, setFormData] = useState({
     name: '', major: '', bio: '', photo: '', interests: [] as string[]
   });
 
+  // --- LOGIC: FETCHING ---
+  const fetchMyProfile = async (uid: string) => {
+    const { data } = await supabase.from('buddies').select('*').eq('id', uid).single();
+    if (data) {
+      setFormData({
+        name: data.name || '',
+        major: data.major || '',
+        bio: data.bio || '',
+        photo: data.photo || '',
+        interests: data.interests || []
+      });
+    }
+  };
+
+  const fetchBuddies = async (uid: string) => {
+    setIsLoading(true);
+    const { data: matched } = await supabase.from('buddy_matches').select('target_id').eq('user_id', uid);
+    const matchedIds = matched?.map(m => m.target_id) || [];
+    const { data } = await supabase.from('buddies').select('*').neq('id', uid)
+      .not('id', 'in', `(${matchedIds.length > 0 ? matchedIds.join(',') : '00000000-0000-0000-0000-000000000000'})`);
+    if (data) setBuddies(data);
+    setIsLoading(false);
+  };
+
+  const fetchMatches = async (uid: string) => {
+    const { data } = await supabase.from('buddy_matches').select(`target_id, buddies!buddy_matches_target_id_fkey (*)`).eq('user_id', uid);
+    if (data) setMatches(data.map(m => m.buddies).filter(Boolean));
+  };
+
+  // --- LOGIC: LIFECYCLE ---
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -132,9 +163,22 @@ export default function CrowdConnect() {
     init();
   }, []);
 
-  // Real-time Chat Subscription
+  // Sync data when view changes to profile
+  useEffect(() => {
+    if (view === 'profile' && userId) {
+      fetchMyProfile(userId);
+    }
+  }, [view, userId]);
+
+  // Chat logic
   useEffect(() => {
     if (view === 'chat' && chatBuddy && userId) {
+      const fetchMessages = async () => {
+        const { data } = await supabase.from('messages').select('*')
+          .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatBuddy.id}),and(sender_id.eq.${chatBuddy.id},receiver_id.eq.${userId})`)
+          .order('created_at', { ascending: true });
+        if (data) setMessages(data);
+      };
       fetchMessages();
       const channel = supabase.channel('realtime-chat')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
@@ -145,88 +189,20 @@ export default function CrowdConnect() {
         }).subscribe();
       return () => { supabase.removeChannel(channel); };
     }
-  }, [view, chatBuddy]);
+  }, [view, chatBuddy, userId]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const fetchMessages = async () => {
-    if (!chatBuddy || !userId) return;
-    const { data } = await supabase.from('messages').select('*')
-      .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatBuddy.id}),and(sender_id.eq.${chatBuddy.id},receiver_id.eq.${userId})`)
-      .order('created_at', { ascending: true });
-    if (data) setMessages(data);
-  };
-
-  const sendChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!msgInput.trim() || !userId || !chatBuddy) return;
-    const { error } = await supabase.from('messages').insert({ sender_id: userId, receiver_id: chatBuddy.id, content: msgInput.trim() });
-    if (!error) setMsgInput('');
-  };
-
-// --- INSIDE YOUR MAIN CrowdConnect COMPONENT ---
-
-const fetchMyProfile = async (uid: string) => {
-  const { data, error } = await supabase
-    .from('buddies')
-    .select('*')
-    .eq('id', uid)
-    .single();
-
-  if (data) {
-    // THIS LINE PRE-FILLS THE FORM
-    setFormData({
-      name: data.name || '',
-      major: data.major || '',
-      bio: data.bio || '',
-      photo: data.photo || '',
-      interests: data.interests || []
-    });
-  }
-};
-
-// Update your init to make sure data is ready before rendering
-useEffect(() => {
-  const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserId(user.id);
-      // Fetch profile first so formData is ready for the editor
-      await fetchMyProfile(user.id); 
-      await fetchMatches(user.id);
-      await fetchBuddies(user.id);
-    }
-  };
-  init();
-}, []);
-
-// ADD THIS: Refresh data when user clicks "My Profile" tab to ensure it's up to date
-useEffect(() => {
-  if (view === 'profile' && userId) {
-    fetchMyProfile(userId);
-  }
-}, [view]);
-
-  const fetchBuddies = async (uid: string) => {
-    setIsLoading(true);
-    const { data: matched } = await supabase.from('buddy_matches').select('target_id').eq('user_id', uid);
-    const matchedIds = matched?.map(m => m.target_id) || [];
-    const { data, error } = await supabase.from('buddies').select('*').neq('id', uid)
-      .not('id', 'in', `(${matchedIds.length > 0 ? matchedIds.join(',') : '00000000-0000-0000-0000-000000000000'})`);
-    if (data) setBuddies(data);
-    setIsLoading(false);
-  };
-
-  const fetchMatches = async (uid: string) => {
-    const { data } = await supabase.from('buddy_matches').select(`target_id, buddies!buddy_matches_target_id_fkey (*)`).eq('user_id', uid);
-    if (data) setMatches(data.map(m => m.buddies).filter(Boolean));
-  };
-
+  // --- LOGIC: ACTIONS ---
   const handleSaveProfile = async () => {
     if (!userId) return;
     setIsSaving(true);
     const { error } = await supabase.from('buddies').upsert({ id: userId, ...formData, updated_at: new Date().toISOString() });
-    if (!error) { await fetchBuddies(userId); setView('connect'); setCurrentIndex(0); }
+    if (!error) { 
+      await fetchBuddies(userId); 
+      setView('connect'); 
+      setCurrentIndex(0); 
+    }
     setIsSaving(false);
   };
 
@@ -237,26 +213,17 @@ useEffect(() => {
     setCurrentIndex(prev => prev + 1);
   };
 
+  const sendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!msgInput.trim() || !userId || !chatBuddy) return;
+    const { error } = await supabase.from('messages').insert({ sender_id: userId, receiver_id: chatBuddy.id, content: msgInput.trim() });
+    if (!error) setMsgInput('');
+  };
+
   const currentUser = useMemo(() => buddies[currentIndex], [buddies, currentIndex]);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-32 font-sans selection:bg-accent selection:text-black transition-colors duration-300">
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: var(--card);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--border);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--muted);
-        }
-      `}</style>
-
       <div className="max-w-7xl mx-auto px-6 py-16">
         <h2 className="text-7xl font-black italic uppercase tracking-tighter mb-16">CROWD CONNECT</h2>
         
@@ -291,7 +258,7 @@ useEffect(() => {
                   </div>
                   <h4 className="font-black uppercase italic text-lg">{chatBuddy.name}</h4>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.sender_id === userId ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] px-4 py-3 rounded-2xl font-bold uppercase text-xs tracking-wider ${msg.sender_id === userId ? 'bg-accent text-black' : 'bg-card border border-border text-foreground'}`}>{msg.content}</div>
