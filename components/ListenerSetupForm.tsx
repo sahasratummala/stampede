@@ -1,16 +1,27 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { User, GraduationCap, Heart, Loader2 } from "lucide-react";
+import { User, GraduationCap, Heart, Loader2, Camera } from "lucide-react";
 
 export default function ListenerSetupForm({ onComplete }: { onComplete: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     major: "",
     bio: "",
     interests: ""
   });
+
+  // Handle Image Selection and Preview
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +31,34 @@ export default function ListenerSetupForm({ onComplete }: { onComplete: () => vo
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
+      let profileImageUrl = "";
+
+      // 1. Upload Image to Supabase Storage if a file was selected
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${user.id}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, imageFile, {
+            upsert: true // This allows users to update/overwrite their photo
+          });
+
+        if (uploadError) throw uploadError;
+
+        // 2. Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        profileImageUrl = publicUrlData.publicUrl;
+      }
+
+      // 3. Insert into listeners table with the image URL
       const { error } = await supabase.from("listeners").insert([{
         id: user.id,
-        ...formData
+        ...formData,
+        profileImageUrl: profileImageUrl
       }]);
 
       if (error) throw error;
@@ -38,10 +74,27 @@ export default function ListenerSetupForm({ onComplete }: { onComplete: () => vo
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="w-full max-w-lg space-y-8">
         <header className="text-center">
-          <div className="w-20 h-20 bg-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-orange-600/20">
-            <User size={40} strokeWidth={3} />
+          {/* PROFILE PHOTO UPLOAD SECTION */}
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="w-24 h-24 bg-zinc-900 rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden border-2 border-zinc-800">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <User size={40} className="text-zinc-700" />
+              )}
+            </div>
+            <label className="absolute -bottom-2 -right-2 bg-orange-600 p-2 rounded-xl cursor-pointer hover:bg-orange-500 transition-colors shadow-lg border-2 border-black">
+              <Camera size={18} />
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageChange} 
+              />
+            </label>
           </div>
-          <h1 className="text-5xl font-black italic uppercase tracking-tighter italic">Fan Profile</h1>
+
+          <h1 className="text-5xl font-black italic uppercase tracking-tighter">Fan Profile</h1>
           <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-2">Join the UT Underground</p>
         </header>
 

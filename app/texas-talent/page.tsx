@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { 
   Loader2, 
   User, 
-  LogOut, 
   Pencil, 
   LayoutDashboard, 
   ChevronDown, 
@@ -101,11 +100,6 @@ export default function SmartProfile() {
     checkUser();
   }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   if (loading) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center">
       <Loader2 className="animate-spin text-orange-500 w-12 h-12" />
@@ -115,7 +109,6 @@ export default function SmartProfile() {
 
   // ARTIST FLOW
   if (role === "artist") {
-    // If editing, show the profile creator
     if (isEditing) {
       return (
         <ArtistProfileCreator 
@@ -128,12 +121,10 @@ export default function SmartProfile() {
       );
     }
 
-    // If no profile exists yet, show profile creator
     if (!hasProfile) {
       return <ArtistProfileCreator onComplete={checkUser} />;
     }
 
-    // Artist has profile - show full dashboard
     return (
       <div className="relative bg-black min-h-screen overflow-x-hidden">
          <section className="relative z-0 border-b border-white/5 pb-16">
@@ -151,7 +142,6 @@ export default function SmartProfile() {
                </div>
             </div>
             
-            {/* STUDIO TOOLS */}
             <div className="grid grid-cols-1 gap-12">
                <MediaPostCreator artistId={user.id} />
                
@@ -165,18 +155,12 @@ export default function SmartProfile() {
             </div>
          </section>
 
-         <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
+         <div className="fixed top-6 right-6 z-[100]">
             <button 
               onClick={() => setIsEditing(true)}
               className="bg-white text-black p-4 rounded-full hover:bg-orange-500 hover:text-white transition-all shadow-2xl flex items-center justify-center"
             >
               <Pencil size={20} />
-            </button>
-            <button 
-              onClick={handleSignOut} 
-              className="bg-zinc-900/80 backdrop-blur-xl px-6 py-3 rounded-full border border-white/10 text-white text-[10px] font-black tracking-widest hover:bg-red-600 transition-all uppercase"
-            >
-              Logout
             </button>
          </div>
       </div>
@@ -185,21 +169,27 @@ export default function SmartProfile() {
 
   // LISTENER FLOW
   if (role === "listener") {
-    // If no profile, show setup form
     if (!hasProfile) {
       return <ListenerSetupForm onComplete={checkUser} />;
     }
 
-    // Listener has profile - show dashboard
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
         <div className="max-w-2xl w-full bg-zinc-950 rounded-[3.5rem] p-12 border border-white/5 relative shadow-2xl">
-          <button onClick={handleSignOut} className="absolute top-10 right-10 text-zinc-600 hover:text-white transition-colors">
-            <LogOut size={24} />
-          </button>
           
-          <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-xl shadow-orange-600/20">
-            <User size={48} className="text-white" />
+          {/* UPDATED: Displays user profile image or fallback gradient */}
+          <div className="w-24 h-24 bg-zinc-900 rounded-[2rem] mb-8 shadow-xl shadow-orange-600/20 overflow-hidden border border-white/10 flex items-center justify-center">
+            {profileData.profileImageUrl ? (
+              <img 
+                src={profileData.profileImageUrl} 
+                className="w-full h-full object-cover" 
+                alt={profileData.name} 
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                <User size={48} className="text-white" />
+              </div>
+            )}
           </div>
           
           <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-2">{profileData.name}</h1>
