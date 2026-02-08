@@ -14,7 +14,7 @@ export default async function FitCheckPage() {
 
       {/* 3. Pass events to OutfitRecommender */}
       <section className="mb-12">
-        <OutfitRecommender events={events} />
+        <OutfitRecommender events={events as any} />
       </section>
 
     </main>
