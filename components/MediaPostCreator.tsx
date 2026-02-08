@@ -1,102 +1,142 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Video, Music, Plus } from "lucide-react";
+import { User, GraduationCap, Heart, Loader2, Camera } from "lucide-react";
 
-export default function MediaPostCreator({ artistId }: { artistId: string }) {
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+export default function ListenerSetupForm({ onComplete }: { onComplete: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    major: "",
+    bio: "",
+    interests: ""
+  });
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title) return alert("Add a title and a file!");
-
     setLoading(true);
+
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${artistId}/${fileName}`;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
 
-      // 1. Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('artist-assets')
-        .upload(filePath, file);
+      let profileImageUrl = "";
 
-      if (uploadError) throw uploadError;
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${user.id}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, imageFile, {
+            upsert: true
+          });
 
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('artist-assets')
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
 
-      // 3. Save to Posts table
-      const { error: postError } = await supabase
-        .from('posts')
-        .insert([{
-          artist_id: artistId,
-          title: title,
-          media_url: publicUrl,
-          media_type: file.type.startsWith('video') ? 'video' : 'audio'
-        }]);
+        const { data: publicUrlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        profileImageUrl = publicUrlData.publicUrl;
+      }
 
-      if (postError) throw postError;
+      const { error } = await supabase.from("listeners").insert([{
+        id: user.id,
+        ...formData,
+        profileImageUrl: profileImageUrl
+      }]);
 
-      alert("Drop Deployed Successfully!");
-      window.location.reload(); // Refreshes to show the new video immediately
-
-    } catch (err: any) {
-      alert(err.message);
+      if (error) throw error;
+      onComplete();
+    } catch (error: any) {
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-zinc-950 p-8 rounded-[2.5rem] border border-white/5">
-      <h3 className="text-xl font-black italic uppercase mb-6 flex items-center gap-2">
-        <Plus className="text-orange-500" /> New Media Drop
-      </h3>
-      <form onSubmit={handleUpload} className="space-y-4">
-        <input 
-          type="text" 
-          placeholder="TRACK OR VIDEO TITLE" 
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full bg-black border border-white/10 p-5 rounded-2xl font-bold text-xs uppercase tracking-widest text-white focus:border-orange-500 outline-none"
-        />
-        
-        <div className="relative">
-          <input 
-            type="file" 
-            accept="video/*,audio/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="hidden"
-            id="media-upload"
-          />
-          <label 
-            htmlFor="media-upload"
-            className="flex items-center justify-center gap-3 w-full bg-zinc-900 border-2 border-dashed border-white/10 p-10 rounded-2xl cursor-pointer hover:border-orange-500/50 transition-all"
-          >
-            {file ? (
-               <span className="text-orange-500 font-bold text-xs uppercase">{file.name}</span>
-            ) : (
-               <>
-                <Video size={20} className="text-zinc-500" />
-                <Music size={20} className="text-zinc-500" />
-                <span className="text-zinc-500 font-bold text-xs uppercase">Select Video or Audio</span>
-               </>
-            )}
-          </label>
-        </div>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6 transition-colors duration-300">
+      <div className="w-full max-w-lg space-y-8">
+        <header className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="w-24 h-24 bg-card rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden border-2 border-border">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <User size={40} className="text-muted" />
+              )}
+            </div>
+            <label className="absolute -bottom-2 -right-2 bg-accent p-2 rounded-xl cursor-pointer hover:brightness-110 transition-colors shadow-lg border-2 border-background">
+              <Camera size={18} className="text-white" />
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageChange} 
+              />
+            </label>
+          </div>
 
-        <button 
-          disabled={loading}
-          className="w-full bg-white text-black font-black py-5 rounded-2xl hover:bg-orange-500 hover:text-white transition-all uppercase text-xs tracking-[0.2em] flex items-center justify-center"
-        >
-          {loading ? <Loader2 className="animate-spin" /> : "DEPLOY DROP"}
-        </button>
-      </form>
+          <h1 className="text-5xl font-black italic uppercase tracking-tighter">Fan Profile</h1>
+          <p className="text-muted font-bold uppercase tracking-widest text-[10px] mt-2">Join the UT Underground</p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="group relative">
+            <input 
+              required 
+              placeholder="FULL NAME" 
+              className="w-full bg-card border border-border p-5 rounded-2xl focus:border-accent outline-none transition-all font-bold uppercase placeholder:text-muted text-foreground"
+              onChange={e => setFormData({...formData, name: e.target.value})}
+            />
+          </div>
+
+          <div className="group relative text-accent">
+            <GraduationCap className="absolute right-5 top-5 opacity-20" />
+            <input 
+              required 
+              placeholder="MAJOR (E.G. RTF, CS)" 
+              className="w-full bg-card border border-border p-5 rounded-2xl focus:border-accent outline-none transition-all font-bold uppercase placeholder:text-muted text-foreground"
+              onChange={e => setFormData({...formData, major: e.target.value})}
+            />
+          </div>
+
+          <textarea 
+            required
+            placeholder="TELL US ABOUT YOUR VIBE..." 
+            className="w-full bg-card border border-border p-5 rounded-2xl h-32 focus:border-accent outline-none transition-all font-medium placeholder:text-muted text-foreground resize-none"
+            onChange={e => setFormData({...formData, bio: e.target.value})}
+          />
+
+          <div className="group relative">
+            <Heart className="absolute right-5 top-5 opacity-20 text-red-500" />
+            <input 
+              placeholder="GENRES YOU LOVE (INDIE, TRAP...)" 
+              className="w-full bg-card border border-border p-5 rounded-2xl focus:border-accent outline-none transition-all font-bold uppercase placeholder:text-muted text-foreground"
+              onChange={e => setFormData({...formData, interests: e.target.value})}
+            />
+          </div>
+
+          <button 
+            disabled={loading}
+            className="w-full bg-foreground text-background font-black py-5 rounded-2xl hover:bg-accent hover:text-white transition-all uppercase italic tracking-tighter text-xl disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin mx-auto" /> : "Start Swiping"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
