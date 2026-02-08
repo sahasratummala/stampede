@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Heart, X, Music, MapPin, Star, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // Your new Supabase client
+import { Heart, X, Music, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function ArtistDiscovery() {
@@ -10,131 +10,90 @@ export default function ArtistDiscovery() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // 1. Fetch from Supabase instead of Firebase
   useEffect(() => {
-    const fetchArtists = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('artists')
-          .select('*')
-          .order('created_at', { ascending: false });
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
 
-        if (error) throw error;
-        
-        setArtists(data || []);
-        setCurrentIndex((data?.length || 1) - 1);
-        setLoading(false);
-      } catch (error) {
-        console.error("Supabase Error:", error);
-        setLoading(false);
+      const { data, error } = await supabase
+        .from('artists')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setArtists(data);
+        setCurrentIndex(data.length - 1);
       }
-    };
-    fetchArtists();
+      setLoading(false);
+    }
+    init();
   }, []);
 
   const handleSwipe = async (dir: 'left' | 'right') => {
-    setDirection(dir);
-    
-    // If Liked (Right), we could add logic here to update a "likes" count in Supabase
-    if (dir === 'right') {
-      const currentArtist = artists[currentIndex];
-      console.log("Liked:", currentArtist.name);
-      // Optional: Add a 'likes' increment logic here later
-    }
-
-    // Move to next card after animation
-    setTimeout(() => {
-      setDirection(null);
-      setCurrentIndex(prev => prev - 1);
-    }, 300);
-  };
-
-  if (loading) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
-      <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-      <p className="text-zinc-500 font-bold tracking-widest uppercase text-xs">Loading the Stampede...</p>
-    </div>
-  );
-
   const currentArtist = artists[currentIndex];
+  setDirection(dir);
+  
+  if (dir === 'right' && currentArtist?.id && currentUserId) {
+    const { error } = await supabase
+      .from('follows')
+      .insert([{ 
+        follower_id: currentUserId, 
+        artist_id: currentArtist.id 
+      }]);
+    
+    if (error) {
+      // If it's a duplicate, just ignore it and log it
+      if (error.code === '23505') {
+        console.log("Already following this artist.");
+      } else {
+        console.error("Error saving follow:", error.message);
+      }
+    } else {
+      console.log(`Successfully followed ${currentArtist.name}`);
+    }
+  }
+
+  setTimeout(() => {
+    setDirection(null);
+    setCurrentIndex(prev => prev - 1);
+  }, 400);
+};
+
+  if (loading) return <div className="min-h-screen bg-black flex flex-col items-center justify-center"><Loader2 className="w-10 h-10 text-orange-500 animate-spin mb-4" /><p className="text-orange-500 font-black italic tracking-widest uppercase text-xs">Syncing Stampede...</p></div>;
+  if (currentIndex < 0) return <div className="min-h-screen bg-black flex flex-col items-center justify-center text-zinc-500 font-bold uppercase tracking-widest gap-4"><Music size={40} className="text-zinc-800" /><p>No more artists in Austin today.</p><button onClick={() => window.location.reload()} className="text-orange-500 text-xs mt-4 underline">Refresh Feed</button></div>;
+
+  const artist = artists[currentIndex];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden flex flex-col items-center py-10">
-      <header className="text-center mb-8">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent italic">
-          DISCOVER
-        </h1>
-        <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] font-bold">UT Austin Music Scene</p>
-      </header>
-
-      {/* Card Deck */}
-      <div className="relative w-[90vw] max-w-[400px] h-[600px]">
-        {currentIndex >= 0 ? (
-          <div 
-            className={`absolute inset-0 bg-zinc-900 rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-300 transform 
-              ${direction === 'left' ? '-translate-x-[150%] rotate-[-20deg] opacity-0' : ''}
-              ${direction === 'right' ? 'translate-x-[150%] rotate-[20deg] opacity-0' : ''}
-            `}
-          >
-            {/* Cover Image */}
-            <img 
-              src={currentArtist.coverImageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9"} 
-              className="absolute inset-0 w-full h-full object-cover opacity-60"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-
-            {/* Profile Content */}
-            <div className="absolute bottom-0 w-full p-8 space-y-4">
-              <div className="flex items-center gap-4">
-                <img src={currentArtist.profileImageUrl} className="w-20 h-20 rounded-2xl border-4 border-black shadow-xl object-cover" />
-                <div>
-                  <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">{currentArtist.name}</h2>
-                  <span className="text-orange-500 font-bold text-xs uppercase tracking-widest">{currentArtist.genre}</span>
-                </div>
+    <div className="min-h-screen bg-black text-white flex flex-col items-center py-10 px-4">
+      <h1 className="text-4xl font-black italic text-orange-500 mb-8 tracking-tighter uppercase">Discover</h1>
+      
+      <div className="relative w-full max-w-[400px] h-[600px]">
+        <div className={`absolute inset-0 bg-zinc-900 rounded-[3rem] overflow-hidden border border-white/10 transition-all duration-500 transform 
+          ${direction === 'left' ? '-translate-x-[150%] rotate-[-20deg] opacity-0' : direction === 'right' ? 'translate-x-[150%] rotate-[20deg] opacity-0' : ''}`}>
+          
+          <img src={artist.coverImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="Cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+          
+          <div className="absolute bottom-0 p-8 w-full">
+            <div className="flex items-center gap-4 mb-4">
+              <img src={artist.profileImageUrl} className="w-20 h-20 rounded-2xl border-4 border-black object-cover" alt="Profile" />
+              <div>
+                <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">{artist.name}</h2>
+                <p className="text-orange-500 font-bold text-[10px] uppercase tracking-widest">{artist.genre}</p>
               </div>
-              
-              <p className="text-zinc-300 text-sm line-clamp-3 font-medium leading-relaxed">
-                {currentArtist.bio}
-              </p>
-
-              <div className="flex items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
-                <span className="flex items-center gap-1"><MapPin size={12}/> Austin</span>
-                <span className="flex items-center gap-1"><Star size={12} fill="currentColor"/> Pro Artist</span>
-              </div>
-
-              <button 
-                onClick={() => router.push(`/artist/${currentArtist.id}`)}
-                className="w-full bg-white/10 backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all"
-              >
-                View Full Profile
-              </button>
             </div>
+            <p className="text-zinc-400 text-sm line-clamp-3 mb-6 font-medium leading-relaxed">{artist.bio}</p>
+            <button onClick={() => router.push(`/artist/${artist.id}`)} className="w-full bg-white/10 backdrop-blur-md border border-white/20 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-black transition-all">View Full Profile</button>
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center p-10">
-            <Music className="text-zinc-800 w-20 h-20 mb-4" />
-            <h2 className="text-2xl font-bold">The herd has passed.</h2>
-            <p className="text-zinc-500 text-sm mb-6">You've seen all the artists for today!</p>
-            <button onClick={() => window.location.reload()} className="text-orange-500 font-bold uppercase tracking-widest text-xs">Start Over</button>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Control Buttons */}
       <div className="flex gap-6 mt-10">
-        <button 
-          onClick={() => handleSwipe('left')}
-          className="w-20 h-20 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center text-red-500 hover:scale-110 active:scale-95 transition-all shadow-xl"
-        >
-          <X size={32} />
-        </button>
-        <button 
-          onClick={() => handleSwipe('right')}
-          className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-orange-600 hover:scale-110 active:scale-95 transition-all shadow-xl shadow-orange-500/20"
-        >
-          <Heart size={32} fill="currentColor" />
-        </button>
+        <button onClick={() => handleSwipe('left')} className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-red-500 border border-white/5 hover:scale-110 active:scale-95 transition-all"><X size={32}/></button>
+        <button onClick={() => handleSwipe('right')} className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-orange-600 shadow-xl shadow-orange-500/20 hover:scale-110 active:scale-95 transition-all"><Heart size={32} fill="currentColor"/></button>
       </div>
     </div>
   );
