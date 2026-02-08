@@ -1,12 +1,15 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation'; // Use this instead of useLocation
 import { useUser } from '../components/UserContent';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
+  // 1. Get the current path using Next.js hook
+  const pathname = usePathname();
   const { profile } = useUser();
-  const isActive = (path: string) => location.pathname === path;
+
+  // 2. Updated isActive logic
+  const isActive = (path: string) => pathname === path;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -15,25 +18,29 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2">
+              {/* 3. Changed 'to' to 'href' */}
+              <Link href="/" className="flex items-center space-x-2">
                 <span className="bg-burnt-orange text-white px-3 py-1 rounded font-bebas text-2xl tracking-wider">MOODY</span>
                 <span className="font-bebas text-2xl text-burnt-orange tracking-widest border-l pl-2 border-gray-300">STUDENTS</span>
               </Link>
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
-              <Link to="/" className={`${isActive('/') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Events</Link>
-              <Link to="/outfit" className={`${isActive('/outfit') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Outfit Recommender</Link>
-              <Link to="/buddies" className={`${isActive('/buddies') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Concert Buddy</Link>
+              {/* 4. Changed all 'to' to 'href' */}
+              <Link href="/" className={`${isActive('/') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Events</Link>
+              <Link href="/outfit" className={`${isActive('/outfit') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Outfit Recommender</Link>
+              <Link href="/buddies" className={`${isActive('/buddies') ? 'text-burnt-orange font-semibold' : 'text-gray-600'} hover:text-burnt-orange transition`}>Concert Buddy</Link>
             </div>
 
             <div className="flex items-center space-x-4">
               <div className="flex flex-col items-end mr-2">
                 <span className="text-xs text-gray-500">UT Student ID</span>
-                <span className="text-sm font-medium">{profile.name.split(' ')[0][0]}. {profile.name.split(' ').slice(1).join(' ')}</span>
+                <span className="text-sm font-medium">
+                    {profile?.name ? `${profile.name.split(' ')[0][0]}. ${profile.name.split(' ').slice(1).join(' ')}` : "User"}
+                </span>
               </div>
               <img 
-                src={profile.photo} 
+                src={profile?.photo || "/default-avatar.png"} 
                 alt="Profile" 
                 className="w-10 h-10 rounded-full border-2 border-burnt-orange p-0.5 object-cover"
               />
