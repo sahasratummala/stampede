@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, Sparkles, Sun, Search, ChevronDown, Calendar, X } from 'lucide-react';
+import { Camera, Upload, Sparkles, Sun, Search, ChevronDown, Calendar, X, CheckCircle, AlertCircle, ThermometerSun } from 'lucide-react';
 
 // --- TYPES ---
-// This defines what an "Event" looks like so TypeScript stops complaining
 interface Event {
   id: string | number;
   artist?: string;
@@ -15,8 +14,6 @@ interface Event {
   vibe?: string;
 }
 
-// This defines the props the component accepts. 
-// NOTICE: It now accepts "events" (plural), not "event".
 interface OutfitRecommenderProps {
   events?: Event[];
 }
@@ -34,6 +31,7 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [weather, setWeather] = useState<any>(null); // Weather state restored
   const [outfitFeed, setOutfitFeed] = useState<any[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,26 +40,36 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
 
   // --- INITIALIZATION ---
   useEffect(() => {
+    // 1. Setup Events
     if (events && events.length > 0) {
-      // Map the incoming data to ensure we always have an "artist" name
       const formatted = events.map(e => ({
         ...e,
-        // Fallback: if artist is missing, use title. If both missing, "Unknown"
         artist: e.artist || e.title || "Special Event"
       }));
       setUpcomingEvents(formatted);
       setSelectedEvent(formatted[0]);
     } else {
-      // Fallback for when the scraper returns nothing
       const fallbacks: Event[] = [
         { id: 'f1', artist: "No Events Found", venue: "Check Calendar", date: "TBA", genre: "pop", vibe: "casual" }
       ];
       setUpcomingEvents(fallbacks);
       setSelectedEvent(fallbacks[0]);
     }
+
+    // 2. Fetch Weather Immediately on Load
+    getWeather().then(data => {
+      if(data) setWeather(data);
+    });
   }, [events]);
 
   // --- API HANDLERS ---
+  const getWeather = async () => {
+    try {
+      const response = await fetch('/api/weather');
+      return response.ok ? await response.json() : null;
+    } catch { return null; }
+  };
+
   const startCamera = async () => {
     setIsCameraOpen(true);
     try {
@@ -112,10 +120,20 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
     setLoading(true);
     setMode('feed');
     try {
+      // Ensure we have weather
+      let currentWeather = weather;
+      if (!currentWeather) {
+          currentWeather = await getWeather();
+          setWeather(currentWeather);
+      }
+
       const res = await fetch('/api/outfit-ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artist: selectedEvent.artist })
+        body: JSON.stringify({ 
+            artist: selectedEvent.artist,
+            weather: currentWeather 
+        })
       });
       const data = await res.json();
       setOutfitFeed(data.images || []);
@@ -125,16 +143,99 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
   const analyzeOutfit = async (imageData: string) => {
     setLoading(true);
     setMode('upload');
+    setAnalysis(null); // Clear previous analysis
+
     try {
+      // Ensure we have weather
+      let currentWeather = weather;
+      if (!currentWeather) {
+          currentWeather = await getWeather();
+          setWeather(currentWeather);
+      }
+
       const res = await fetch('/api/analyze-outfit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageData, artist: selectedEvent?.artist })
+        body: JSON.stringify({ 
+            image: imageData, 
+            artist: selectedEvent?.artist,
+            venue: selectedEvent?.venue,
+            weather: currentWeather
+        })
       });
       setAnalysis(await res.json());
     } catch {
       setAnalysis({ error: "Analysis failed" });
     } finally { setLoading(false); }
+  };
+
+  // --- SUB-COMPONENT: DETAILED RESULTS ---
+  const AnalysisResults = () => {
+    if (!analysis) return null;
+    if (analysis.error) return <div className="bg-red-50 p-4 rounded-xl text-red-800 border border-red-200 text-center">{analysis.error}</div>;
+
+    return (
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="bg-white rounded-2xl p-6 shadow-xl border-t-4 border-[#BF5700]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`font-black text-2xl ${UT_ORANGE_TEXT} tracking-tighter`}>OVERALL FEEDBACK</h3>
+            {/* Star Rating */}
+            <div className="flex gap-1 bg-stone-50 p-2 rounded-lg">
+              {[...Array(5)].map((_, i) => (
+                <Sparkles key={i} className={`w-5 h-5 ${i < (analysis.rating || 0) ? 'fill-[#BF5700] text-[#BF5700]' : 'text-stone-200'}`} />
+              ))}
+            </div>
+          </div>
+          <p className="text-stone-700 text-lg leading-relaxed font-medium">{analysis.overallFeedback}</p>
+        </div>
+
+        {/* Weather Verdict */}
+        {analysis.weatherVerdict && (
+          <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-4 flex items-start gap-4">
+            <div className="bg-blue-100 p-2 rounded-full shrink-0 text-blue-600">
+              <ThermometerSun className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-bold text-blue-900 text-sm uppercase tracking-wider mb-1">Weather Analysis</h4>
+              <p className="text-blue-800 font-medium leading-snug">{analysis.weatherVerdict}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Keep vs Change Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* What to Keep */}
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-5">
+            <h4 className="font-bold text-emerald-800 mb-3 flex items-center gap-2 uppercase text-xs tracking-wider">
+              <CheckCircle className="w-4 h-4" /> What to Keep
+            </h4>
+            <ul className="space-y-2">
+              {analysis.whatWorks?.map((item: string, idx: number) => (
+                <li key={idx} className="text-sm text-emerald-900 flex items-start gap-2">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* What to Change */}
+          <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-5">
+            <h4 className={`font-bold ${UT_ORANGE_TEXT} mb-3 flex items-center gap-2 uppercase text-xs tracking-wider`}>
+              <AlertCircle className="w-4 h-4" /> Possible Changes
+            </h4>
+            <ul className="space-y-2">
+              {analysis.suggestions?.map((item: string, idx: number) => (
+                <li key={idx} className="text-sm text-stone-800 flex items-start gap-2">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#BF5700] shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // --- UI COMPONENTS ---
@@ -184,6 +285,21 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
                 <Camera className="w-5 h-5" /> SNAP PHOTO
               </button>
             </div>
+
+            {/* Weather Widget (Restored) */}
+            {weather && (
+                <div className="bg-white border border-stone-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm animate-in fade-in">
+                    <div className="bg-orange-50 p-3 rounded-full text-[#BF5700]">
+                        <Sun className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider">Current Weather</p>
+                        <p className="font-bold text-stone-800 text-lg">
+                            {weather.temp}°F <span className="text-stone-300 font-normal">|</span> {weather.condition}
+                        </p>
+                    </div>
+                </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN */}
@@ -198,13 +314,8 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
                     <img src={uploadedImage} className="w-full rounded-3xl shadow-xl" alt="Preview" />
                     <button onClick={() => setUploadedImage(null)} className="absolute top-4 right-4 bg-black/50 text-white rounded-full p-2"><X /></button>
                 </div>
-                {analysis && (
-                  <div className="p-6 bg-white rounded-2xl shadow-sm border-t-4 border-[#BF5700] animate-in slide-in-from-bottom-4">
-                     <h3 className={`font-black text-2xl ${UT_ORANGE_TEXT} mb-4`}>STYLIST FEEDBACK</h3>
-                     <p className="text-lg font-medium text-stone-700">{analysis.overallFeedback}</p>
-                     {analysis.error && <p className="text-red-500 mt-2">{analysis.error}</p>}
-                  </div>
-                )}
+                {/* Full Analysis Component */}
+                <AnalysisResults />
               </div>
             ) : mode === 'feed' && outfitFeed.length > 0 ? (
                 <div className="columns-2 gap-4">
@@ -236,6 +347,9 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
       )}
     </div>
   );
+};
+
+export default OutfitRecommender;
 };
 
 export default OutfitRecommender;
