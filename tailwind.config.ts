@@ -16,6 +16,8 @@ const config: Config = {
         border: 'var(--border)',
         muted: 'var(--muted)',
         accent: 'var(--accent)',
+        'burnt-orange': '#BF5700',
+        'charcoal': '#1a1a1a',
       },
     },
   },

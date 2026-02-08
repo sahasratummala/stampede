@@ -1,31 +1,70 @@
+/* Font imports MUST come first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
 @import "tailwindcss";
 
-/* 1. FORCE LIGHT MODE DEFAULT */
+.font-bebas {
+  font-family: 'Bebas Neue', cursive;
+}
+
+/* UT Austin Burnt Orange */
+.bg-burnt-orange { 
+  background-color: #f44800; 
+}
+.text-burnt-orange { 
+  color: #f44800; 
+}
+.border-burnt-orange { 
+  border-color: #f44800; 
+}
+
+/* Charcoal color for chat header */
+.bg-charcoal {
+  background-color: #1a1a1a;
+}
+
+/* Custom Animations */
+@keyframes swipe-left {
+  0% { transform: translateX(0) rotate(0); opacity: 1; }
+  100% { transform: translateX(-200px) rotate(-20deg); opacity: 0; }
+}
+@keyframes swipe-right {
+  0% { transform: translateX(0) rotate(0); opacity: 1; }
+  100% { transform: translateX(200px) rotate(20deg); opacity: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-swipe-left { 
+  animation: swipe-left 0.5s forwards; 
+}
+.animate-swipe-right { 
+  animation: swipe-right 0.5s forwards; 
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* FORCE LIGHT MODE DEFAULT */
 :root {
   --background: #ffffff;
   --foreground: #09090b;
-  /* Black text */
   --card: #f4f4f5;
-  /* Light gray card */
   --border: #e4e4e7;
-  /* Light border */
   --muted: #71717a;
-  /* Gray text */
   --accent: #f44800;
-  /* Stampede Orange */
 }
 
-/* 2. DARK MODE (Only if .dark class is added) */
+/* DARK MODE - Only if .dark class is added */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
-  /* White text */
   --card: #18181b;
-  /* Dark card */
   --border: #27272a;
-  /* Dark border */
   --muted: #a1a1aa;
-  /* Gray text */
 }
 
 @theme inline {
@@ -40,6 +79,6 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
