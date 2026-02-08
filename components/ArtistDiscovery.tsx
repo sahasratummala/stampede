@@ -144,10 +144,10 @@ export default function ArtistDiscovery() {
     <X size={32}/>
   </button>
 
-  {/* Like / Heart Button - FIXED */}
+  {/* Like / Heart Button - NOW MATCHES SKIP BUTTON STYLE */}
   <button 
     onClick={() => handleSwipe('right')} 
-    className="w-20 h-20 bg-neutral-900 dark:bg-white rounded-full flex items-center justify-center text-accent shadow-xl shadow-accent/20 hover:scale-110 active:scale-95 transition-all"
+    className="w-20 h-20 bg-card rounded-full flex items-center justify-center text-accent border border-border hover:border-accent/50 hover:shadow-xl hover:shadow-accent/10 transition-all active:scale-95"
   >
     <Heart size={32} fill="currentColor"/>
   </button>
