@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
-import BuddyFinder from './views/BuddyFinder';
-import { UserProvider } from './context/UserContext';
+import Layout from '../components/Layout';
+import BuddyFinder from './BuddyFinder';
+import { UserProvider } from '../context/UserContext';
 
 const App: React.FC = () => {
   return (
