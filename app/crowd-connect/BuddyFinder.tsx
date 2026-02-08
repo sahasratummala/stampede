@@ -164,10 +164,48 @@ export default function CrowdConnect() {
     if (!error) setMsgInput('');
   };
 
-  const fetchMyProfile = async (uid: string) => {
-    const { data } = await supabase.from('buddies').select('*').eq('id', uid).single();
-    if (data) setFormData({ name: data.name || '', major: data.major || '', bio: data.bio || '', photo: data.photo || '', interests: data.interests || [] });
+// --- INSIDE YOUR MAIN CrowdConnect COMPONENT ---
+
+const fetchMyProfile = async (uid: string) => {
+  const { data, error } = await supabase
+    .from('buddies')
+    .select('*')
+    .eq('id', uid)
+    .single();
+
+  if (data) {
+    // THIS LINE PRE-FILLS THE FORM
+    setFormData({
+      name: data.name || '',
+      major: data.major || '',
+      bio: data.bio || '',
+      photo: data.photo || '',
+      interests: data.interests || []
+    });
+  }
+};
+
+// Update your init to make sure data is ready before rendering
+useEffect(() => {
+  const init = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      // Fetch profile first so formData is ready for the editor
+      await fetchMyProfile(user.id); 
+      await fetchMatches(user.id);
+      await fetchBuddies(user.id);
+    }
   };
+  init();
+}, []);
+
+// ADD THIS: Refresh data when user clicks "My Profile" tab to ensure it's up to date
+useEffect(() => {
+  if (view === 'profile' && userId) {
+    fetchMyProfile(userId);
+  }
+}, [view]);
 
   const fetchBuddies = async (uid: string) => {
     setIsLoading(true);
