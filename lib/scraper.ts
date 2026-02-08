@@ -1,5 +1,5 @@
 // lib/scraper.ts
-import * as cheerio from 'cheerio';
+// import * as cheerio from 'cheerio';
 
 // Define the Event interface
 export interface Event {
