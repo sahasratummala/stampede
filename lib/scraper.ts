@@ -19,7 +19,6 @@ function parseSafeDate(dateStr: string): string {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return 'TBA';
 
-        // Create UTC date parts to avoid local timezone shifting
         const y = d.getUTCFullYear();
         const m = String(d.getUTCMonth() + 1).padStart(2, '0');
         const day = String(d.getUTCDate()).padStart(2, '0');
@@ -95,9 +94,14 @@ async function scrapeButler(): Promise<Event[]> {
             }
         });
 
-        // ✅ Filter out nulls properly for TypeScript
         const results = await Promise.all(detailPromises);
-        const filtered: Event[] = results.filter((e): e is Event => e !== null);
+
+        // ✅ Type guard ensures TypeScript knows nulls are filtered out
+        function isEvent(e: Event | null): e is Event {
+            return e !== null;
+        }
+
+        const filtered = results.filter(isEvent);
 
         console.log(`✅ Butler: Scraped ${filtered.length} events`);
         return filtered;
@@ -189,7 +193,7 @@ export async function fetchAllEvents(): Promise<Event[]> {
             image:
                 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA',
         },
-        // … add remaining manual events exactly as before …
+        // Add the rest of your manual events here exactly as before...
     ];
 
     // Combine manual events first
