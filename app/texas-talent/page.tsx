@@ -101,9 +101,9 @@ export default function SmartProfile() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-      <Loader2 className="animate-spin text-orange-500 w-12 h-12" />
-      <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs mt-4">Syncing...</p>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center transition-colors duration-300">
+      <Loader2 className="animate-spin text-accent w-12 h-12" />
+      <p className="text-muted font-bold uppercase tracking-widest text-xs mt-4">Syncing...</p>
     </div>
   );
 
@@ -126,29 +126,29 @@ export default function SmartProfile() {
     }
 
     return (
-      <div className="relative bg-black min-h-screen overflow-x-hidden">
-         <section className="relative z-0 border-b border-white/5 pb-16">
+      <div className="relative bg-background min-h-screen overflow-x-hidden transition-colors duration-300">
+         <section className="relative z-0 border-b border-border pb-16">
             <ArtistPublicProfile userId={user.id} /> 
          </section>
          
-         <section className="max-w-4xl mx-auto px-6 py-24 relative z-10 bg-black">
+         <section className="max-w-4xl mx-auto px-6 py-24 relative z-10 bg-background">
             <div className="flex items-center gap-4 mb-10">
-               <div className="bg-orange-600 p-3 rounded-2xl shadow-lg shadow-orange-600/20">
+               <div className="bg-accent p-3 rounded-2xl shadow-lg shadow-accent/20">
                   <LayoutDashboard size={24} className="text-white" />
                </div>
                <div>
-                  <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none text-white">Artist Studio</h2>
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Manage your herd's content</p>
+                  <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none text-foreground">Artist Studio</h2>
+                  <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Manage your herd's content</p>
                </div>
             </div>
             
             <div className="grid grid-cols-1 gap-12">
                <MediaPostCreator artistId={user.id} />
                
-               <div className="border-t border-white/5 pt-12">
+               <div className="border-t border-border pt-12">
                   <div className="flex items-center gap-3 mb-6">
-                    <Calendar className="text-orange-500" size={20} />
-                    <h3 className="text-xl font-black italic uppercase text-white">Tour Dates</h3>
+                    <Calendar className="text-accent" size={20} />
+                    <h3 className="text-xl font-black italic uppercase text-foreground">Tour Dates</h3>
                   </div>
                   <EventCreator artistId={user.id} />
                </div>
@@ -158,7 +158,7 @@ export default function SmartProfile() {
          <div className="fixed top-6 right-6 z-[100]">
             <button 
               onClick={() => setIsEditing(true)}
-              className="bg-white text-black p-4 rounded-full hover:bg-orange-500 hover:text-white transition-all shadow-2xl flex items-center justify-center"
+              className="bg-foreground text-background p-4 rounded-full hover:bg-accent hover:text-white transition-all shadow-2xl flex items-center justify-center"
             >
               <Pencil size={20} />
             </button>
@@ -174,11 +174,11 @@ export default function SmartProfile() {
     }
 
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full bg-zinc-950 rounded-[3.5rem] p-12 border border-white/5 relative shadow-2xl">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6 transition-colors duration-300">
+        <div className="max-w-2xl w-full bg-card rounded-[3.5rem] p-12 border border-border relative shadow-2xl">
           
           {/* UPDATED: Displays user profile image or fallback gradient */}
-          <div className="w-24 h-24 bg-zinc-900 rounded-[2rem] mb-8 shadow-xl shadow-orange-600/20 overflow-hidden border border-white/10 flex items-center justify-center">
+          <div className="w-24 h-24 bg-card rounded-[2rem] mb-8 shadow-xl shadow-accent/20 overflow-hidden border border-border flex items-center justify-center">
             {profileData.profileImageUrl ? (
               <img 
                 src={profileData.profileImageUrl} 
@@ -186,43 +186,43 @@ export default function SmartProfile() {
                 alt={profileData.name} 
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center">
                 <User size={48} className="text-white" />
               </div>
             )}
           </div>
           
-          <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-2">{profileData.name}</h1>
-          <p className="text-orange-500 font-bold uppercase tracking-[0.3em] text-xs mb-6">{profileData.major}</p>
-          <p className="text-zinc-400 text-xl leading-relaxed mb-10 font-medium italic opacity-80">{profileData.bio}</p>
+          <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-2 text-foreground">{profileData.name}</h1>
+          <p className="text-accent font-bold uppercase tracking-[0.3em] text-xs mb-6">{profileData.major}</p>
+          <p className="text-muted text-xl leading-relaxed mb-10 font-medium italic opacity-80">{profileData.bio}</p>
           
-          <div className="mb-10 bg-black/40 rounded-3xl border border-white/5 overflow-hidden">
+          <div className="mb-10 bg-background rounded-3xl border border-border overflow-hidden">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-900/50 transition-all"
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-card transition-all"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <Music size={14} className="text-orange-500" />
+                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Music size={14} className="text-accent" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
                   Your Liked Artists ({followedArtists.length})
                 </span>
               </div>
-              {isMenuOpen ? <ChevronUp size={16} className="text-zinc-600" /> : <ChevronDown size={16} className="text-zinc-600" />}
+              {isMenuOpen ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
             </button>
 
             {isMenuOpen && (
               <div className="px-4 pb-4 max-h-60 overflow-y-auto custom-scrollbar">
                 {followedArtists.length === 0 ? (
-                  <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-widest p-4 text-center">No artists liked yet.</p>
+                  <p className="text-[10px] text-muted font-bold uppercase tracking-widest p-4 text-center">No artists liked yet.</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-2">
                     {followedArtists.map((artist) => (
                       <div 
                         key={artist.id}
                         onClick={() => router.push(`/artist/${artist.id}`)}
-                        className="flex items-center gap-4 p-3 bg-zinc-900/50 rounded-2xl border border-white/5 hover:border-orange-500/50 transition-all cursor-pointer group"
+                        className="flex items-center gap-4 p-3 bg-card rounded-2xl border border-border hover:border-accent transition-all cursor-pointer group"
                       >
                         <img 
                           src={artist.profileImageUrl} 
@@ -230,8 +230,8 @@ export default function SmartProfile() {
                           alt="" 
                         />
                         <div className="flex-1">
-                          <p className="text-xs font-black uppercase tracking-tight group-hover:text-orange-500 transition-colors">{artist.name}</p>
-                          <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest">{artist.genre}</p>
+                          <p className="text-xs font-black uppercase tracking-tight text-foreground group-hover:text-accent transition-colors">{artist.name}</p>
+                          <p className="text-[8px] text-muted font-bold uppercase tracking-widest">{artist.genre}</p>
                         </div>
                       </div>
                     ))}
@@ -243,7 +243,7 @@ export default function SmartProfile() {
 
           <button 
             onClick={() => router.push("/discover")}
-            className="w-full bg-white text-black font-black py-5 rounded-[2rem] hover:bg-orange-500 hover:text-white transition-all uppercase italic text-2xl tracking-tight shadow-xl shadow-white/5"
+            className="w-full bg-foreground text-background font-black py-5 rounded-[2rem] hover:bg-accent hover:text-white transition-all uppercase italic text-2xl tracking-tight shadow-xl"
           >
             Start Discovering
           </button>
