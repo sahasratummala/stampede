@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { 
   Instagram, Music, Youtube, Globe, Calendar, 
   MapPin, Heart, Check, PlayCircle, Headphones,
-  ExternalLink, Loader2
+  ExternalLink, Loader2, Clock
 } from "lucide-react";
 
 export default function ArtistPublicProfile({ userId }: { userId: string }) {
@@ -50,6 +50,12 @@ export default function ArtistPublicProfile({ userId }: { userId: string }) {
     }
   };
 
+  // Helper to format month names from date strings (YYYY-MM-DD)
+  const getMonthName = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+  };
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" size={40} /></div>;
   if (!artist) return <div className="p-20 text-center text-zinc-500 font-black uppercase tracking-widest italic">Artist not found.</div>;
 
@@ -90,15 +96,30 @@ export default function ArtistPublicProfile({ userId }: { userId: string }) {
               {events.length === 0 ? <p className="text-zinc-700 text-xs font-bold uppercase italic tracking-widest">No scheduled appearances.</p> : (
                 <div className="space-y-6">
                   {events.map(event => (
-                    <div key={event.id} className="bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 flex justify-between items-center group hover:border-orange-500/50 transition-all">
-                      <div>
-                        <p className="font-black italic uppercase text-xl leading-none mb-2">{event.name}</p>
-                        <span className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-widest"><MapPin size={14} className="text-orange-500"/> {event.location}</span>
+                    <div key={event.id} className="bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 flex flex-col gap-4 group hover:border-orange-500/50 transition-all">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-black italic uppercase text-xl leading-none mb-2">{event.name}</p>
+                          <span className="flex flex-wrap items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                            <MapPin size={14} className="text-orange-500"/> {event.location}
+                            {event.event_time && (
+                              <span className="flex items-center gap-1 ml-2">
+                                <Clock size={12} className="text-zinc-600" /> {event.event_time}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="bg-orange-600 rounded-2xl p-3 flex flex-col items-center min-w-[70px] shadow-lg shadow-orange-900/40">
+                           <span className="text-[10px] font-black uppercase text-orange-200 opacity-80">{getMonthName(event.event_date)}</span>
+                           <span className="text-xl font-black text-white leading-none">{event.event_date.split('-')[2]}</span>
+                        </div>
                       </div>
-                      <div className="bg-orange-600 rounded-2xl p-3 flex flex-col items-center min-w-[70px] shadow-lg shadow-orange-900/40">
-                         <span className="text-[10px] font-black uppercase text-orange-200 opacity-80">2026</span>
-                         <span className="text-xl font-black text-white leading-none">{event.event_date.split('-')[2] || '??'}</span>
-                      </div>
+                      
+                      {event.message && (
+                        <p className="text-[10px] text-zinc-400 font-medium border-t border-white/5 pt-3 italic leading-relaxed">
+                          "{event.message}"
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

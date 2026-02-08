@@ -9,7 +9,8 @@ import {
   LayoutDashboard, 
   ChevronDown, 
   ChevronUp, 
-  Music 
+  Music,
+  Calendar // Added icon for events
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +18,7 @@ import ArtistProfileCreator from "../components/ArtistProfileCreator";
 import ArtistPublicProfile from "../components/ArtistPublicProfile";
 import ListenerSetupForm from "../components/ListenerSetupForm";
 import MediaPostCreator from "../components/MediaPostCreator";
+import EventCreator from "../components/EventCreator"; // Restored Import
 
 export default function SmartProfile() {
   const [loading, setLoading] = useState(true);
@@ -71,10 +73,8 @@ export default function SmartProfile() {
     setLoading(false);
   };
 
-  // ROBUST FETCH: This manually joins the data to ensure the list updates
   const fetchFollowedArtists = async (userId: string) => {
     try {
-      // 1. Get all artist IDs this user follows
       const { data: follows, error: followError } = await supabase
         .from('follows')
         .select('artist_id')
@@ -84,8 +84,6 @@ export default function SmartProfile() {
 
       if (follows && follows.length > 0) {
         const artistIds = follows.map(f => f.artist_id);
-
-        // 2. Fetch the actual artist details for those IDs
         const { data: artists, error: artistError } = await supabase
           .from('artists')
           .select('id, name, profileImageUrl, genre')
@@ -144,7 +142,19 @@ export default function SmartProfile() {
                   <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Manage your herd's content</p>
                </div>
             </div>
-            <MediaPostCreator artistId={user.id} />
+            
+            {/* STUDIO TOOLS */}
+            <div className="grid grid-cols-1 gap-12">
+               <MediaPostCreator artistId={user.id} />
+               
+               <div className="border-t border-white/5 pt-12">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Calendar className="text-orange-500" size={20} />
+                    <h3 className="text-xl font-black italic uppercase text-white">Tour Dates</h3>
+                  </div>
+                  <EventCreator artistId={user.id} />
+               </div>
+            </div>
          </section>
 
          <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
@@ -183,7 +193,6 @@ export default function SmartProfile() {
           <p className="text-orange-500 font-bold uppercase tracking-[0.3em] text-xs mb-6">{profileData.major}</p>
           <p className="text-zinc-400 text-xl leading-relaxed mb-10 font-medium italic opacity-80">{profileData.bio}</p>
           
-          {/* LIKED ARTISTS COLLAPSIBLE MENU */}
           <div className="mb-10 bg-black/40 rounded-3xl border border-white/5 overflow-hidden">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
