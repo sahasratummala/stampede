@@ -350,6 +350,3 @@ const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
 };
 
 export default OutfitRecommender;
-};
-
-export default OutfitRecommender;
