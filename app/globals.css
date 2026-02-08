@@ -10,13 +10,13 @@
 
 /* UT Austin Burnt Orange */
 .bg-burnt-orange { 
-  background-color: #BF5700; 
+  background-color: #f44800; 
 }
 .text-burnt-orange { 
-  color: #BF5700; 
+  color: #f44800; 
 }
 .border-burnt-orange { 
-  border-color: #BF5700; 
+  border-color: #f44800; 
 }
 
 /* Charcoal color for chat header */
