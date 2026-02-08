@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { Event } from '@/lib/serpapi';
+import { Event } from '@/lib/scraper';
 import Link from 'next/link';
 import Image from 'next/image';
 
