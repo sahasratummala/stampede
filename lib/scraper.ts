@@ -83,9 +83,9 @@ async function scrapeButler(): Promise<Event[]> {
                     title: item.title,
                     date,
                     venue: 'Butler School of Music',
-                    image: image ?? undefined,
+                    image: image || undefined,
                     link: item.url,
-                    description: $d('.field-name-body').text().trim().substring(0, 150) ?? ''
+                    description: $d('.field-name-body').text().trim().substring(0, 150) || undefined
                 };
             } catch {
                 return null;
@@ -93,13 +93,7 @@ async function scrapeButler(): Promise<Event[]> {
         });
 
         const results = await Promise.all(detailPromises);
-        const filtered = results
-            .filter((e): e is Event => e !== null)
-            .map(e => ({
-                ...e,
-                image: e.image ?? undefined,
-                description: e.description ?? ''
-            }));
+        const filtered = results.filter((e): e is Event => e !== null);
 
         console.log(`✅ Butler: Scraped ${filtered.length} events`);
         return filtered;
@@ -151,9 +145,9 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
                 title: e.name,
                 date: e.dates?.start?.localDate || 'TBA',
                 venue: 'Moody Center',
-                image: e.images?.[0]?.url ?? undefined,
+                image: e.images?.[0]?.url || undefined,
                 link: e.url,
-                description: e.classifications?.[0]?.genre?.name ?? ''
+                description: e.classifications?.[0]?.genre?.name || undefined
             }));
 
         console.log(`✅ Moody: Got ${filtered.length} events from Ticketmaster`);
@@ -181,11 +175,7 @@ export async function fetchAllEvents(): Promise<Event[]> {
     ];
 
     // Combine all events
-    const all = [...moody, ...butler, ...manualEvents].map(e => ({
-        ...e,
-        image: e.image ?? undefined,
-        description: e.description ?? ''
-    }));
+    const all = [...moody, ...butler, ...manualEvents];
 
     // Filter out unwanted events
     const filtered = all.filter(event =>
