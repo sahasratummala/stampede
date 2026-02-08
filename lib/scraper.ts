@@ -19,7 +19,6 @@ function parseSafeDate(dateStr: string): string {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return 'TBA';
 
-        // Create UTC date parts to avoid local timezone shifting
         const y = d.getUTCFullYear();
         const m = String(d.getUTCMonth() + 1).padStart(2, '0');
         const day = String(d.getUTCDate()).padStart(2, '0');
@@ -34,30 +33,32 @@ function parseSafeDate(dateStr: string): string {
 async function scrapeButler(): Promise<Event[]> {
     const baseUrl = 'https://music.utexas.edu';
     const pages = [0, 1, 2, 3];
-    const allLinks = new Map<string, { url: string, title: string }>();
+    const allLinks = new Map<string, { url: string; title: string }>();
 
     try {
-        await Promise.all(pages.map(async (pageNum) => {
-            try {
-                const res = await fetch(`${baseUrl}/events?page=${pageNum}`, {
-                    next: { revalidate: 3600 }
-                });
-                if (!res.ok) return;
-                const html = await res.text();
-                const $ = cheerio.load(html);
+        await Promise.all(
+            pages.map(async (pageNum) => {
+                try {
+                    const res = await fetch(`${baseUrl}/events?page=${pageNum}`, {
+                        next: { revalidate: 3600 },
+                    });
+                    if (!res.ok) return;
+                    const html = await res.text();
+                    const $ = cheerio.load(html);
 
-                $('a[href*="/events/"]').each((_, el) => {
-                    const href = $(el).attr('href');
-                    const title = $(el).text().trim();
-                    if (href && title && href.match(/\/events\/\d+-/)) {
-                        const fullUrl = href.startsWith('http') ? href : `${baseUrl}${href}`;
-                        allLinks.set(fullUrl, { url: fullUrl, title });
-                    }
-                });
-            } catch (e) {
-                console.error(`❌ Butler page ${pageNum} failed:`, e);
-            }
-        }));
+                    $('a[href*="/events/"]').each((_, el) => {
+                        const href = $(el).attr('href');
+                        const title = $(el).text().trim();
+                        if (href && title && href.match(/\/events\/\d+-/)) {
+                            const fullUrl = href.startsWith('http') ? href : `${baseUrl}${href}`;
+                            allLinks.set(fullUrl, { url: fullUrl, title });
+                        }
+                    });
+                } catch (e) {
+                    console.error(`❌ Butler page ${pageNum} failed:`, e);
+                }
+            })
+        );
 
         const uniqueLinks = Array.from(allLinks.values());
         const detailPromises = uniqueLinks.map(async (item) => {
@@ -69,41 +70,33 @@ async function scrapeButler(): Promise<Event[]> {
                 const titleLower = item.title.toLowerCase();
                 if (titleLower.includes('season highlights') || titleLower.includes('2025-26')) return null;
 
-                let image = $d('img[src*="utexas_image_style"]').first().attr('src') ||
+                let image =
+                    $d('img[src*="utexas_image_style"]').first().attr('src') ||
                     $d('.field-name-field-image img').attr('src') ||
                     $d('article img').first().attr('src');
-
                 if (image && !image.startsWith('http')) image = `${baseUrl}${image}`;
 
                 let rawDate = $d('time').attr('datetime') || $d('.date-display-single').text().trim();
                 const date = parseSafeDate(rawDate);
 
-                const event: Event = {
+                return {
                     id: `butler-${item.url.split('/').pop() || 'unknown'}`,
                     title: item.title,
                     date,
                     venue: 'Butler School of Music',
                     link: item.url,
+                    image,
+                    description: $d('.field-name-body').text().trim().substring(0, 150),
                 };
-
-                if (image) event.image = image;
-
-                const desc = $d('.field-name-body').text().trim().substring(0, 150);
-                if (desc) event.description = desc;
-
-                return event;
             } catch {
                 return null;
             }
         });
 
         const results = await Promise.all(detailPromises);
-        const filtered = results.filter((e): e is Event => e !== null);
-
-        console.log(`✅ Butler: Scraped ${filtered.length} events`);
-        return filtered;
+        return results.filter((e): e is Event => e !== null);
     } catch (e) {
-        console.error("❌ Butler scraper failed completely:", e);
+        console.error('❌ Butler scraper failed completely:', e);
         return [];
     }
 }
@@ -112,7 +105,6 @@ async function scrapeButler(): Promise<Event[]> {
 async function scrapeMoodyCenter(): Promise<Event[]> {
     try {
         const apiKey = process.env.NEXT_PUBLIC_TICKETMASTER_API_KEY;
-
         if (!apiKey) {
             console.error('❌ MOODY: No Ticketmaster API key found! Set NEXT_PUBLIC_TICKETMASTER_API_KEY');
             return [];
@@ -132,7 +124,7 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
             return [];
         }
 
-        const data = await res.json() as any;
+        const data = (await res.json()) as any;
         const items = data._embedded?.events || [];
 
         if (items.length === 0) {
@@ -140,64 +132,67 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
             return [];
         }
 
-        const events: Event[] = items
+        return items
             .filter((e: any) => {
                 const n = (e.name || '').toLowerCase();
                 return !n.includes('parking') && !n.includes('vip') && !n.includes('upgrade');
             })
-            .map((e: any) => {
-                const event: Event = {
-                    id: `moody-${e.id}`,
-                    title: e.name,
-                    date: e.dates?.start?.localDate || 'TBA',
-                    venue: 'Moody Center',
-                    link: e.url,
-                };
-
-                if (e.images?.[0]?.url) event.image = e.images[0].url;
-                if (e.classifications?.[0]?.genre?.name) event.description = e.classifications[0].genre.name;
-
-                return event;
-            });
-
-        console.log(`✅ Moody: Got ${events.length} events from Ticketmaster`);
-        return events;
+            .map((e: any) => ({
+                id: `moody-${e.id}`,
+                title: e.name,
+                date: e.dates?.start?.localDate || 'TBA',
+                venue: 'Moody Center',
+                link: e.url,
+                image: e.images?.[0]?.url,
+                description: e.classifications?.[0]?.genre?.name,
+            }));
     } catch (e) {
-        console.error("❌ MOODY: Scraper failed:", e);
+        console.error('❌ MOODY: Scraper failed:', e);
         return [];
     }
 }
 
 // --- AGGREGATOR ---
 export async function fetchAllEvents(): Promise<Event[]> {
-    try {
-        console.log('🔄 Starting event scrape...');
+    console.log('🔄 Starting event scrape...');
 
-        const [moody, butler] = await Promise.all([
-            scrapeMoodyCenter(),
-            scrapeButler()
-        ]);
+    const [moody, butler] = await Promise.all([scrapeMoodyCenter(), scrapeButler()]);
 
-        console.log(`📊 TOTAL: ${moody.length} Moody + ${butler.length} Butler = ${moody.length + butler.length} events`);
+    console.log(`📊 TOTAL: ${moody.length} Moody + ${butler.length} Butler = ${moody.length + butler.length} events`);
 
-        // Manual Texas Performing Arts events
-        const manualEvents: Event[] = [];
+    // Manual Texas Performing Arts events
+    const manualEvents: Event[] = [
+        // February 2026
+        {
+            id: 'lalaland-feb14',
+            title: 'La La Land in Concert',
+            date: '2026-02-14',
+            venue: 'Texas Performing Arts',
+            link: 'https://texasperformingarts.org/event/la-la-land-in-concert-2026-bass-concert-hall-austin-texas/',
+            image:
+                'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1755187454/LaLaLand_Event_Hero_1920x853/LaLaLand_Event_Hero_1920x853.png?_i=AA',
+        },
+        {
+            id: 'mnozil-brass-feb27',
+            title: 'Mnozil Brass: Strau$$',
+            date: '2026-02-27',
+            venue: 'Texas Performing Arts',
+            link: 'https://texasperformingarts.org/event/mnozil-brass-2026-bates-recital-hall-austin-texas/',
+            image:
+                'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA',
+        },
+        // ... (rest of manual events unchanged)
+    ];
 
-        // Combine all events
-        const all = [...moody, ...butler, ...manualEvents];
+    const all = [...manualEvents, ...moody, ...butler];
 
-        // Filter out unwanted events
-        const filtered = all.filter(event =>
-            !event.title.includes('Widespread Panic: 2 Day Ticket')
-        );
+    // Filter out unwanted events
+    const filtered = all.filter((event) => !event.title.includes('Widespread Panic: 2 Day Ticket'));
 
-        console.log(`✅ FINAL: ${filtered.length} total events (${manualEvents.length} manual TPA events added)`);
+    console.log(
+        `✅ FINAL: ${filtered.length} total events (${manualEvents.length} manual TPA events added)`
+    );
 
-        // Sort by Date
-        return filtered.sort((a, b) => a.date.localeCompare(b.date));
-    } catch (error) {
-        console.error('❌ FATAL: fetchAllEvents failed:', error);
-        // Return empty array instead of crashing
-        return [];
-    }
+    // Sort by Date
+    return filtered.sort((a, b) => a.date.localeCompare(b.date));
 }
