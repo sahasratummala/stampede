@@ -19,6 +19,7 @@ function parseSafeDate(dateStr: string): string {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return 'TBA';
 
+        // Create UTC date parts to avoid local timezone shifting
         const y = d.getUTCFullYear();
         const m = String(d.getUTCMonth() + 1).padStart(2, '0');
         const day = String(d.getUTCDate()).padStart(2, '0');
@@ -88,13 +89,18 @@ async function scrapeButler(): Promise<Event[]> {
                     image,
                     description: $d('.field-name-body').text().trim().substring(0, 150),
                 };
-            } catch {
+            } catch (e) {
+                console.error(`❌ Butler event fetch failed for ${item.url}:`, e);
                 return null;
             }
         });
 
+        // ✅ Filter out nulls properly for TypeScript
         const results = await Promise.all(detailPromises);
-        return results.filter((e): e is Event => e !== null);
+        const filtered: Event[] = results.filter((e): e is Event => e !== null);
+
+        console.log(`✅ Butler: Scraped ${filtered.length} events`);
+        return filtered;
     } catch (e) {
         console.error('❌ Butler scraper failed completely:', e);
         return [];
@@ -132,7 +138,7 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
             return [];
         }
 
-        return items
+        const filtered = items
             .filter((e: any) => {
                 const n = (e.name || '').toLowerCase();
                 return !n.includes('parking') && !n.includes('vip') && !n.includes('upgrade');
@@ -146,6 +152,9 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
                 image: e.images?.[0]?.url,
                 description: e.classifications?.[0]?.genre?.name,
             }));
+
+        console.log(`✅ Moody: Got ${filtered.length} events from Ticketmaster`);
+        return filtered;
     } catch (e) {
         console.error('❌ MOODY: Scraper failed:', e);
         return [];
@@ -160,9 +169,8 @@ export async function fetchAllEvents(): Promise<Event[]> {
 
     console.log(`📊 TOTAL: ${moody.length} Moody + ${butler.length} Butler = ${moody.length + butler.length} events`);
 
-    // Manual Texas Performing Arts events
+    // Manual Texas Performing Arts events (manual events first)
     const manualEvents: Event[] = [
-        // February 2026
         {
             id: 'lalaland-feb14',
             title: 'La La Land in Concert',
@@ -181,17 +189,16 @@ export async function fetchAllEvents(): Promise<Event[]> {
             image:
                 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA',
         },
-        // ... (rest of manual events unchanged)
+        // … add remaining manual events exactly as before …
     ];
 
+    // Combine manual events first
     const all = [...manualEvents, ...moody, ...butler];
 
     // Filter out unwanted events
     const filtered = all.filter((event) => !event.title.includes('Widespread Panic: 2 Day Ticket'));
 
-    console.log(
-        `✅ FINAL: ${filtered.length} total events (${manualEvents.length} manual TPA events added)`
-    );
+    console.log(`✅ FINAL: ${filtered.length} total events (${manualEvents.length} manual TPA events added)`);
 
     // Sort by Date
     return filtered.sort((a, b) => a.date.localeCompare(b.date));
