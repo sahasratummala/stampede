@@ -1,15 +1,6 @@
 
 import { User } from "./types";
 
-export const UT_THEME = {
-  burntOrange: '#BF5700',
-  charcoal: '#333f48',
-  white: '#FFFFFF',
-  limestone: '#D6D2C4'
-};
-
-export const CATEGORIES = ['Concerts', 'Basketball', 'Comedy', 'Community'];
-
 export const CONCERT_MOODS = ['Pit Warrior', 'Merch Hunter', 'Vibe Seeker', 'Photo Pro', 'First Timer'] as const;
 
 export const AVAILABLE_PROMPTS = [

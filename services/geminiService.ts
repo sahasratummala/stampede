@@ -1,6 +1,5 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { OutfitSuggestion, ConcertEvent } from "../types";
 
 // Always use process.env.GEMINI_API_KEY directly for initialization as per @google/genai guidelines.
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -15,7 +14,7 @@ const handleApiError = (e: any) => {
 /**
  * Fetches real-world music events from specific UT Austin related domains.
  */
-export const getUpcomingEvents = async (location: 'Moody Center' | 'Butler School of Music'): Promise<{ events: ConcertEvent[], grounding: any[] }> => {
+export const getUpcomingEvents = async (location: 'Moody Center' | 'Butler School of Music'): Promise<{ events: any[], grounding: any[] }> => {
   const url = location === 'Moody Center'
     ? "https://moodycenteratx.com/events/category/music/"
     : "https://music.utexas.edu/";
@@ -137,7 +136,7 @@ export const getOutfitTrends = async (artistName: string) => {
   }
 };
 
-export const analyzeOutfit = async (imageBase64: string, artistName: string): Promise<OutfitSuggestion> => {
+export const analyzeOutfit = async (imageBase64: string, artistName: string): Promise<any> => {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

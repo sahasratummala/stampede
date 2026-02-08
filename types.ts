@@ -19,24 +19,3 @@ export interface User {
   concertMood?: 'Pit Warrior' | 'Merch Hunter' | 'Vibe Seeker' | 'Photo Pro' | 'First Timer';
 }
 
-export interface ConcertEvent {
-  id: string;
-  title: string;
-  artist: string;
-  date: string;
-  image: string;
-  description: string;
-  category: string;
-}
-
-export interface GroundingSource {
-  title: string;
-  uri: string;
-}
-
-export interface OutfitSuggestion {
-  vibe: string;
-  description: string;
-  items: string[];
-  tips: string;
-}
