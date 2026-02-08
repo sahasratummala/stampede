@@ -61,7 +61,9 @@ async function scrapeButler(): Promise<Event[]> {
         );
 
         const uniqueLinks = Array.from(allLinks.values());
-        const detailPromises = uniqueLinks.map(async (item) => {
+
+        // FIX 1: Explicitly type the return promise as Event | null
+        const detailPromises = uniqueLinks.map(async (item): Promise<Event | null> => {
             try {
                 const dRes = await fetch(item.url);
                 const dHtml = await dRes.text();
@@ -85,7 +87,7 @@ async function scrapeButler(): Promise<Event[]> {
                     date,
                     venue: 'Butler School of Music',
                     link: item.url,
-                    image,
+                    image: image || undefined, // Ensure strictly string | undefined
                     description: $d('.field-name-body').text().trim().substring(0, 150),
                 };
             } catch (e) {
@@ -96,12 +98,8 @@ async function scrapeButler(): Promise<Event[]> {
 
         const results = await Promise.all(detailPromises);
 
-        // ✅ Type guard ensures TypeScript knows nulls are filtered out
-        function isEvent(e: Event | null): e is Event {
-            return e !== null;
-        }
-
-        const filtered = results.filter(isEvent);
+        // FIX 2: Use an inline type predicate to filter nulls
+        const filtered = results.filter((e): e is Event => e !== null);
 
         console.log(`✅ Butler: Scraped ${filtered.length} events`);
         return filtered;
@@ -129,8 +127,6 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
 
         if (!res.ok) {
             console.error(`❌ MOODY: API returned ${res.status} ${res.statusText}`);
-            const errorText = await res.text();
-            console.error('Error details:', errorText.substring(0, 200));
             return [];
         }
 
@@ -147,7 +143,8 @@ async function scrapeMoodyCenter(): Promise<Event[]> {
                 const n = (e.name || '').toLowerCase();
                 return !n.includes('parking') && !n.includes('vip') && !n.includes('upgrade');
             })
-            .map((e: any) => ({
+            // FIX 3: Explicitly return Event type here to allow safe aggregation later
+            .map((e: any): Event => ({
                 id: `moody-${e.id}`,
                 title: e.name,
                 date: e.dates?.start?.localDate || 'TBA',
@@ -173,7 +170,7 @@ export async function fetchAllEvents(): Promise<Event[]> {
 
     console.log(`📊 TOTAL: ${moody.length} Moody + ${butler.length} Butler = ${moody.length + butler.length} events`);
 
-    // Manual Texas Performing Arts events (manual events first)
+    // Manual Texas Performing Arts events
     const manualEvents: Event[] = [
         {
             id: 'lalaland-feb14',
@@ -181,8 +178,7 @@ export async function fetchAllEvents(): Promise<Event[]> {
             date: '2026-02-14',
             venue: 'Texas Performing Arts',
             link: 'https://texasperformingarts.org/event/la-la-land-in-concert-2026-bass-concert-hall-austin-texas/',
-            image:
-                'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1755187454/LaLaLand_Event_Hero_1920x853/LaLaLand_Event_Hero_1920x853.png?_i=AA',
+            image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1755187454/LaLaLand_Event_Hero_1920x853/LaLaLand_Event_Hero_1920x853.png?_i=AA',
         },
         {
             id: 'mnozil-brass-feb27',
@@ -190,10 +186,9 @@ export async function fetchAllEvents(): Promise<Event[]> {
             date: '2026-02-27',
             venue: 'Texas Performing Arts',
             link: 'https://texasperformingarts.org/event/mnozil-brass-2026-bates-recital-hall-austin-texas/',
-            image:
-                'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA',
+            image: 'https://res.cloudinary.com/ds5gdw0uw/images/c_scale,w_1560,h_693,dpr_2/f_auto,q_auto:good/v1748900830/MnozilBrass_Event_Hero_1920x853/MnozilBrass_Event_Hero_1920x853.png?_i=AA',
         },
-        // Add the rest of your manual events here exactly as before...
+        // ... Add any other manual events here
     ];
 
     // Combine manual events first
