@@ -34,7 +34,7 @@ export default async function Page() {
     return (
         <div className="min-h-screen font-sans bg-background selection:bg-accent selection:text-white transition-colors duration-300">
             {/* 3. Pass the typed array to your Calendar component */}
-            <EventCalendar initialEvents={allEvents} />
+            <EventCalendar initialEvents={allEvents as any} />
         </div>
     );
 }
