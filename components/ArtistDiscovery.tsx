@@ -135,10 +135,23 @@ export default function ArtistDiscovery() {
         </div>
       </div>
 
-      <div className="flex gap-6 mt-10">
-        <button onClick={() => handleSwipe('left')} className="w-20 h-20 bg-card rounded-full flex items-center justify-center text-red-500 border border-border hover:scale-110 active:scale-95 transition-all"><X size={32}/></button>
-        <button onClick={() => handleSwipe('right')} className="w-20 h-20 bg-foreground rounded-full flex items-center justify-center text-accent shadow-xl shadow-accent/20 hover:scale-110 active:scale-95 transition-all"><Heart size={32} fill="currentColor"/></button>
-      </div>
+<div className="flex gap-6 mt-10">
+  {/* Pass / Skip Button */}
+  <button 
+    onClick={() => handleSwipe('left')} 
+    className="w-20 h-20 bg-card rounded-full flex items-center justify-center text-muted border border-border hover:text-red-500 hover:border-red-500/30 transition-all shadow-lg"
+  >
+    <X size={32}/>
+  </button>
+
+  {/* Like / Heart Button - FIXED */}
+  <button 
+    onClick={() => handleSwipe('right')} 
+    className="w-20 h-20 bg-neutral-900 dark:bg-white rounded-full flex items-center justify-center text-accent shadow-xl shadow-accent/20 hover:scale-110 active:scale-95 transition-all"
+  >
+    <Heart size={32} fill="currentColor"/>
+  </button>
+</div>
     </div>
   );
 }
