@@ -31,10 +31,11 @@ const OutfitRecommender = ({ events = [] }) => {
   useEffect(() => {
     if (events && events.length > 0) {
       // Map 'title' to 'artist' for API compatibility
-      const formattedEvents = events.map(evt => ({
-        ...evt,
-        artist: evt.title,
-      }));
+      const formattedEvents = (events as any[]).map(evt => ({
+  ...evt,
+  artist: evt.title,
+}));
+
 
       setUpcomingEvents(formattedEvents);
       setSelectedEvent(formattedEvents[0]);
