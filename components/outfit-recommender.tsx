@@ -198,16 +198,274 @@ const OutfitRecommender: React.FC<OutfitRecommenderProps> = ({ events = [] }) =>
     } catch (error) { setAnalysis({ error: 'Failed to analyze outfit.' }); } finally { setLoading(false); }
   };
 
-  // --- EventSelector / AnalysisResults / OutfitFeed remain unchanged ---
-  // They now work with typed upcomingEvents and selectedEvent
-
+  // --- RENDER ---
   return (
     <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 font-sans pb-32">
-      {/* ... rest of your component remains unchanged ... */}
-      {/* Just make sure to pass typed upcomingEvents, selectedEvent etc. */}
+      {/* Header */}
+      <div className="max-w-5xl mx-auto px-4 pt-8 pb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold text-[var(--foreground)]">Fit Check</h1>
+          <Sparkles className="w-8 h-8 text-purple-500" />
+        </div>
+        <p className="text-[var(--muted-foreground)]">
+          Get AI-powered outfit recommendations for your next concert
+        </p>
+      </div>
+
+      {/* Event Selector */}
+      <div className="max-w-5xl mx-auto px-4 mb-6">
+        <div className="relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between hover:bg-[var(--accent)] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-purple-500" />
+              <div className="text-left">
+                <div className="font-semibold text-[var(--foreground)]">
+                  {selectedEvent?.artist || 'Select Event'}
+                </div>
+                <div className="text-sm text-[var(--muted-foreground)] flex items-center gap-2">
+                  <MapPin className="w-3 h-3" />
+                  {selectedEvent?.venue}
+                  {selectedEvent?.date && ` • ${new Date(selectedEvent.date).toLocaleDateString()}`}
+                </div>
+              </div>
+            </div>
+            <ChevronDown className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute z-50 w-full mt-2 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-lg max-h-80 overflow-y-auto">
+              {upcomingEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="w-full p-4 text-left hover:bg-[var(--accent)] transition-colors border-b border-[var(--border)] last:border-b-0"
+                >
+                  <div className="font-semibold text-[var(--foreground)]">{event.artist}</div>
+                  <div className="text-sm text-[var(--muted-foreground)] flex items-center gap-2">
+                    <MapPin className="w-3 h-3" />
+                    {event.venue}
+                    {event.date && ` • ${new Date(event.date).toLocaleDateString()}`}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Weather Card */}
+      {weather && (
+        <div className="max-w-5xl mx-auto px-4 mb-6">
+          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sun className="w-6 h-6 text-yellow-500" />
+                <div>
+                  <div className="font-semibold text-[var(--foreground)]">
+                    {weather.temp}°F • {weather.condition}
+                  </div>
+                  <div className="text-sm text-[var(--muted-foreground)]">
+                    Event day forecast
+                  </div>
+                </div>
+              </div>
+              <ThermometerSun className="w-8 h-8 text-orange-500 opacity-50" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mode Toggle */}
+      <div className="max-w-5xl mx-auto px-4 mb-6">
+        <div className="flex gap-2 bg-[var(--card)] border border-[var(--border)] rounded-xl p-1">
+          <button
+            onClick={() => setMode('upload')}
+            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+              mode === 'upload'
+                ? 'bg-purple-500 text-white shadow-lg'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            <Upload className="w-4 h-4 inline mr-2" />
+            Check My Fit
+          </button>
+          <button
+            onClick={fetchOutfitFeed}
+            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+              mode === 'feed'
+                ? 'bg-purple-500 text-white shadow-lg'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            <Search className="w-4 h-4 inline mr-2" />
+            Get Ideas
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="max-w-5xl mx-auto px-4">
+        {mode === 'upload' && !uploadedImage && !isCameraOpen && (
+          <div className="bg-[var(--card)] border-2 border-dashed border-[var(--border)] rounded-xl p-12 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <Camera className="w-16 h-16 text-[var(--muted-foreground)]" />
+              <div>
+                <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+                  Upload Your Outfit
+                </h3>
+                <p className="text-[var(--muted-foreground)] mb-6">
+                  Take a photo or upload an image to get AI feedback
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={startCamera}
+                  className="px-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors flex items-center gap-2"
+                >
+                  <Camera className="w-5 h-5" />
+                  Open Camera
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-6 py-3 bg-[var(--accent)] text-[var(--foreground)] border border-[var(--border)] rounded-lg font-medium hover:bg-[var(--accent-hover)] transition-colors flex items-center gap-2"
+                >
+                  <Upload className="w-5 h-5" />
+                  Upload Photo
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Camera View */}
+        {isCameraOpen && (
+          <div className="bg-[var(--card)] rounded-xl overflow-hidden">
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full rounded-t-xl"
+              />
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                <button
+                  onClick={capturePhoto}
+                  className="px-8 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                >
+                  Capture Photo
+                </button>
+                <button
+                  onClick={stopCamera}
+                  className="px-8 py-3 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analysis Results */}
+        {mode === 'upload' && uploadedImage && (
+          <div className="space-y-6">
+            <div className="bg-[var(--card)] rounded-xl overflow-hidden border border-[var(--border)]">
+              <img src={uploadedImage} alt="Your outfit" className="w-full max-h-96 object-contain bg-black" />
+            </div>
+
+            {loading && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-[var(--muted-foreground)]">Analyzing your fit...</p>
+                </div>
+              </div>
+            )}
+
+            {analysis && !loading && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  {analysis.verdict === 'approved' ? (
+                    <CheckCircle className="w-8 h-8 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-8 h-8 text-yellow-500" />
+                  )}
+                  <h3 className="text-2xl font-bold text-[var(--foreground)]">
+                    {analysis.verdict === 'approved' ? 'Fit Approved! 🔥' : 'Could Be Better 🤔'}
+                  </h3>
+                </div>
+
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-[var(--foreground)] whitespace-pre-wrap">{analysis.feedback}</p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setUploadedImage(null);
+                    setAnalysis(null);
+                  }}
+                  className="w-full mt-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                >
+                  Try Another Outfit
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Outfit Feed */}
+        {mode === 'feed' && (
+          <div>
+            {loading && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-[var(--muted-foreground)]">Generating outfit ideas...</p>
+                </div>
+              </div>
+            )}
+
+            {!loading && outfitFeed.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {outfitFeed.map((outfit, idx) => (
+                  <div key={idx} className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
+                    <img
+                      src={outfit.url}
+                      alt={outfit.description || `Outfit ${idx + 1}`}
+                      className="w-full h-80 object-cover"
+                    />
+                    {outfit.description && (
+                      <div className="p-4">
+                        <p className="text-sm text-[var(--muted-foreground)]">{outfit.description}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!loading && outfitFeed.length === 0 && (
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-12 text-center">
+                <p className="text-[var(--muted-foreground)]">No outfit ideas found. Try again!</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default OutfitRecommender;
-
