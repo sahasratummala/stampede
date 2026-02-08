@@ -85,7 +85,6 @@ export default function ArtistPublicProfile({ userId }: { userId: string }) {
               <p className="text-zinc-400 leading-relaxed font-medium">{artist.bio}</p>
             </div>
 
-            {/* RESTORED CUTE CALENDAR SHOWS */}
             <div>
               <h3 className="text-orange-500 font-black uppercase text-[10px] tracking-[0.3em] mb-6 italic">Upcoming Shows</h3>
               {events.length === 0 ? <p className="text-zinc-700 text-xs font-bold uppercase italic tracking-widest">No scheduled appearances.</p> : (
@@ -109,7 +108,49 @@ export default function ArtistPublicProfile({ userId }: { userId: string }) {
 
           <div className="lg:col-span-3">
              <h3 className="text-orange-500 font-black uppercase text-[10px] tracking-[0.3em] mb-6 italic">Latest Drops</h3>
-             {/* ... (Posts list code same as before) */}
+             {posts.length === 0 ? (
+               <div className="h-64 border-2 border-dashed border-zinc-900 rounded-[3rem] flex items-center justify-center">
+                 <p className="text-zinc-700 text-xs font-black uppercase">No media deployed.</p>
+               </div>
+             ) : (
+               <div className="grid grid-cols-1 gap-8">
+                 {posts.map(post => (
+                   <div key={post.id} className="bg-zinc-900/30 rounded-[2.5rem] border border-white/5 overflow-hidden group hover:border-orange-500/30 transition-all">
+                     
+                     <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+                       {post.media_type === 'video' ? (
+                         <video 
+                           src={post.media_url} 
+                           controls 
+                           className="w-full h-full object-contain"
+                           poster={artist.coverImageUrl}
+                         />
+                       ) : (
+                         <div className="flex flex-col items-center gap-4">
+                           <Headphones size={48} className="text-orange-500 animate-pulse" />
+                           <a href={post.media_url} target="_blank" className="px-6 py-2 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all">
+                             Open Audio Link
+                           </a>
+                         </div>
+                       )}
+                     </div>
+
+                     <div className="p-6 flex items-center justify-between bg-gradient-to-b from-zinc-900/50 to-black">
+                       <div>
+                         <p className="text-lg font-black italic uppercase tracking-tight leading-none mb-1">{post.title}</p>
+                         <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest flex items-center gap-2">
+                           {post.media_type === 'video' ? <PlayCircle size={12}/> : <Music size={12}/>}
+                           {post.media_type}
+                         </p>
+                       </div>
+                       <a href={post.media_url} target="_blank" className="p-4 bg-zinc-800 rounded-2xl text-white hover:text-orange-500 transition-all">
+                         <ExternalLink size={18} />
+                       </a>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
           </div>
         </div>
       </div>
