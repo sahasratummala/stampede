@@ -1,8 +1,8 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Always use process.env.GEMINI_API_KEY directly for initialization as per @google/genai guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const apiKey = process.env.GEMINI_API_KEY || '';
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const handleApiError = (e: any) => {
   if (e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -15,6 +15,26 @@ const handleApiError = (e: any) => {
  * Fetches real-world music events from specific UT Austin related domains.
  */
 export const getUpcomingEvents = async (location: 'Moody Center' | 'Butler School of Music'): Promise<{ events: any[], grounding: any[] }> => {
+  // Fallback sample data if API key is not configured
+  if (!ai) {
+    const sampleMoody = [
+      { id: '1', title: 'Post Malone in Concert', artist: 'Post Malone', date: 'Feb 15, 2025', description: 'Chart-topping hits and new releases. A high-energy performance of Post Malone\'s biggest songs from across his career.', category: 'Concert', image: 'https://picsum.photos/800/400?random=101' },
+      { id: '2', title: 'Travis Scott Live', artist: 'Travis Scott', date: 'Mar 1, 2025', description: 'Hip-hop and trap music showcase. Experience the production and energy that made Travis Scott a global phenomenon.', category: 'Concert', image: 'https://picsum.photos/800/400?random=102' },
+      { id: '3', title: 'SZA Tour Stop', artist: 'SZA', date: 'Mar 20, 2025', description: 'R&B and soul performance featuring hits from her album. A mesmerizing show from one of music\'s brightest stars.', category: 'Concert', image: 'https://picsum.photos/800/400?random=103' },
+      { id: '4', title: 'The Weeknd Experience', artist: 'The Weeknd', date: 'Apr 10, 2025', description: 'Electronic and pop music extravaganza. The Weeknd brings his signature dark sound and spectacular production.', category: 'Concert', image: 'https://picsum.photos/800/400?random=104' }
+    ];
+    const sampleButler = [
+      { id: '5', title: 'UT Symphony Orchestra', artist: 'UT Symphony Orchestra', date: 'Feb 20, 2025', description: 'Classical masterpieces performed by UT\'s premier ensemble. A showcase of classical excellence featuring works from renowned composers.', category: 'Classical/Jazz', image: 'https://picsum.photos/800/400?random=201' },
+      { id: '6', title: 'Jazz Ensemble Recital', artist: 'UT Jazz Ensemble', date: 'Mar 10, 2025', description: 'Contemporary and traditional jazz performances. Experience the improvisation and creativity of UT\'s award-winning jazz program.', category: 'Classical/Jazz', image: 'https://picsum.photos/800/400?random=202' },
+      { id: '7', title: 'Piano Recital Series', artist: 'Faculty Piano Recital', date: 'Mar 25, 2025', description: 'Featuring world-class pianists in intimate settings. Witness virtuosic performances in the beautiful Bates Recital Hall.', category: 'Classical/Jazz', image: 'https://picsum.photos/800/400?random=203' },
+      { id: '8', title: 'Chamber Music Ensemble', artist: 'UT Chamber Ensemble', date: 'Apr 5, 2025', description: 'Intimate performances of chamber classics. Small ensemble performances showcasing the finest chamber music repertoire.', category: 'Classical/Jazz', image: 'https://picsum.photos/800/400?random=204' }
+    ];
+    return {
+      events: location === 'Moody Center' ? sampleMoody : sampleButler,
+      grounding: []
+    };
+  }
+
   const url = location === 'Moody Center'
     ? "https://moodycenteratx.com/events/category/music/"
     : "https://music.utexas.edu/";
@@ -99,6 +119,20 @@ export const getAllEventNames = async (): Promise<string[]> => {
 };
 
 export const getArtistInfo = async (artistName: string) => {
+  // Fallback artist info if API key is not configured
+  if (!ai) {
+    const sampleInfo: { [key: string]: string } = {
+      'Post Malone': 'Post Malone is an American rapper, singer, and songwriter known for his genre-blending style combining hip-hop, pop, and rock elements. He\'s famous for hits like "Circles," "Congratulations," and "Psycho." In live performance, Post Malone is known for his energetic stage presence and engaging interactions with fans. His concerts feature both high-production visuals and intimate moments with the audience.',
+      'Travis Scott': 'Travis Scott is a rapper and producer known for his atmospheric production style and hits like "Sicko Mode" and "Astroworld." Live, he\'s known for creating immersive experiences with elaborate stage designs and pyrotechnics. His concerts are high-energy celebrations of hip-hop with unexpected collaborations and surprises.',
+      'SZA': 'SZA is an R&B and soul artist celebrated for her smooth vocals and hit songs like "Good Days" and "The Weekend." Known for her artistic visuals and emotional performances, SZA creates intimate yet powerful concert experiences. Her shows blend modern production with soulful performances that connect deeply with audiences.',
+      'default': 'This artist is known for creating memorable live performances that bring their studio music to life with dynamic stage presence and impressive production values. Their concerts typically feature their chart-topping hits alongside deeper cuts that showcase their artistry and connection with fans.'
+    };
+    return {
+      text: sampleInfo[artistName] || sampleInfo['default'],
+      sources: []
+    };
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -118,6 +152,13 @@ export const getArtistInfo = async (artistName: string) => {
 };
 
 export const getOutfitTrends = async (artistName: string) => {
+  if (!ai) {
+    return {
+      text: `For a ${artistName} concert, embrace style that reflects the energy of the music. Look for trendy, comfortable pieces that let you move and dance. Consider the venue vibe: upscale casual for some artists, streetwear and sneakers for others. Most importantly, wear something that makes you feel confident and connects with the music!`,
+      sources: []
+    };
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -137,6 +178,15 @@ export const getOutfitTrends = async (artistName: string) => {
 };
 
 export const analyzeOutfit = async (imageBase64: string, artistName: string): Promise<any> => {
+  if (!ai) {
+    return {
+      vibe: "Concert Ready",
+      description: `Your outfit has great concert vibes! For a ${artistName} show, you're definitely bringing the energy.`,
+      items: ["Great shoes for dancing", "Comfortable but stylish top", "Perfect concert energy"],
+      tips: "Make sure you can move and dance! This look works great for a concert."
+    };
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -179,6 +229,20 @@ export const generateBuddyResponse = async (
   userProfile: any,
   conversationHistory: Array<{ role: string; content: string }> = []
 ): Promise<string> => {
+  // Fallback responses if API is not configured
+  if (!ai) {
+    const fallbacks = [
+      "That sounds amazing! 🎵",
+      "Yeah, I'm hyped too!",
+      "Dude, so down for that",
+      "Hook 'em! 🤘",
+      "Facts facts facts",
+      "Let's do it! This is gonna be fire!",
+      "I'm so ready for this"
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
   try {
     const conversationContext = conversationHistory
       .slice(-4) // Keep last 4 messages for context
