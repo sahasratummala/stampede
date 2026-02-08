@@ -1,28 +1,65 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, Sparkles, Sun, CheckCircle, AlertCircle, ThermometerSun, Search, ChevronDown, Calendar, MapPin, X, ArrowRight } from 'lucide-react';
+import { Camera, Upload, Sparkles, Sun, CheckCircle, AlertCircle, ThermometerSun, Search, ChevronDown, Calendar, MapPin, X } from 'lucide-react';
 
-const OutfitRecommender = ({ events = [] }) => {
+// --- TYPES ---
+interface Event {
+  id: string | number;
+  title?: string;  // Coming from the raw prop
+  artist?: string; // Used internally after mapping
+  venue: string;
+  date: string;
+  genre?: string;
+  vibe?: string;
+}
+
+interface AnalysisResult {
+  rating: number;
+  overallFeedback: string;
+  weatherVerdict?: string;
+  whatWorks: string[];
+  suggestions: string[];
+  error?: string;
+}
+
+interface OutfitIdea {
+  src?: string;
+  thumbnail?: string;
+  title: string;
+  link: string;
+  source: string;
+}
+
+interface WeatherData {
+  temp: number;
+  condition: string;
+}
+
+interface OutfitRecommenderProps {
+  events?: Event[];
+}
+
+const OutfitRecommender = ({ events = [] }: OutfitRecommenderProps) => {
   // --- CONFIGURATION ---
   const UT_ORANGE = "bg-[#BF5700]";
   const UT_ORANGE_TEXT = "text-[#BF5700]";
 
   // --- STATE ---
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
 
-  const [mode, setMode] = useState('upload'); // 'upload' or 'feed'
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
+  const [mode, setMode] = useState<'upload' | 'feed'>('upload');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [weather, setWeather] = useState(null);
-  const [outfitFeed, setOutfitFeed] = useState([]);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [outfitFeed, setOutfitFeed] = useState<OutfitIdea[]>([]);
 
-  const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // --- 0. BROWSER TITLE FIX ---
@@ -33,22 +70,20 @@ const OutfitRecommender = ({ events = [] }) => {
   // --- 1. USE EVENTS FROM PROP ---
   useEffect(() => {
     if (events && events.length > 0) {
-      // Map events to expected format
-      const formattedEvents = events.map(evt => ({
+      const formattedEvents: Event[] = events.map(evt => ({
         id: evt.id,
-        artist: evt.title, // Use title as artist name
+        artist: evt.title || "Unknown Artist",
         venue: evt.venue,
         date: evt.date,
-        genre: 'concert', // Default genre
-        vibe: 'concert', // Default vibe
+        genre: evt.genre || 'concert',
+        vibe: evt.vibe || 'concert',
       }));
       
       setUpcomingEvents(formattedEvents);
       setSelectedEvent(formattedEvents[0]);
       setIsLoadingEvents(false);
     } else {
-      // Fallback events if none provided
-      const fallbackEvents = [
+      const fallbackEvents: Event[] = [
         { id: 'f1', artist: "No Events Found", venue: "Check Calendar", date: "TBA", genre: "pop", vibe: "casual" }
       ];
       setUpcomingEvents(fallbackEvents);
@@ -89,7 +124,7 @@ const OutfitRecommender = ({ events = [] }) => {
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
+      const stream = videoRef.current.srcObject as MediaStream;
       const tracks = stream.getTracks();
       tracks.forEach(track => track.stop());
       videoRef.current.srcObject = null;
@@ -103,24 +138,23 @@ const OutfitRecommender = ({ events = [] }) => {
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-      stopCamera();
-      setUploadedImage(dataUrl);
-      analyzeOutfit(dataUrl);
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        stopCamera();
+        setUploadedImage(dataUrl);
+        analyzeOutfit(dataUrl);
+      }
     }
   };
 
-  // --- COMPRESSION HELPER ---
-  const compressImage = (file) => {
+  const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
         const img = new Image();
-        img.src = event.target.result;
+        img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 1024;
@@ -135,17 +169,15 @@ const OutfitRecommender = ({ events = [] }) => {
           }
 
           const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(dataUrl);
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
         };
       };
     });
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setLoading(true);
       try {
@@ -161,11 +193,10 @@ const OutfitRecommender = ({ events = [] }) => {
 
   const fetchOutfitFeed = async () => {
     if (!selectedEvent) return;
-
     setOutfitFeed([]); 
     setLoading(true);
     setMode('feed');
-    setUploadedImage(null); // Clear any uploaded image so we see the feed
+    setUploadedImage(null);
 
     try {
       let currentWeather = weather;
@@ -195,7 +226,7 @@ const OutfitRecommender = ({ events = [] }) => {
     }
   };
 
-  const analyzeOutfit = async (imageData) => {
+  const analyzeOutfit = async (imageData: string) => {
     if (!selectedEvent) return;
     setLoading(true);
     setAnalysis(null);
@@ -226,7 +257,7 @@ const OutfitRecommender = ({ events = [] }) => {
 
     } catch (error) {
       console.error('Analysis failed:', error);
-      setAnalysis({ error: 'Failed to analyze outfit.' });
+      setAnalysis({ rating: 0, overallFeedback: '', whatWorks: [], suggestions: [], error: 'Failed to analyze outfit.' });
     } finally {
       setLoading(false);
     }
@@ -294,7 +325,7 @@ const OutfitRecommender = ({ events = [] }) => {
             <h3 className={`font-black text-2xl ${UT_ORANGE_TEXT} tracking-tighter`}>OVERALL FEEDBACK</h3>
             <div className="flex gap-1 bg-stone-50 p-2 rounded-lg">
               {[...Array(5)].map((_, i) => (
-                <Sparkles key={i} className={`w-6 h-6 ${i < analysis.rating ? 'fill-[#BF5700] text-[#BF5700]' : 'text-stone-200'}`} />
+                <Sparkles key={i} className={`w-6 h-6 ${i < (analysis.rating || 0) ? 'fill-[#BF5700] text-[#BF5700]' : 'text-stone-200'}`} />
               ))}
             </div>
           </div>
@@ -345,13 +376,12 @@ const OutfitRecommender = ({ events = [] }) => {
     );
   };
 
-  const OutfitFeed = () => (
+  const OutfitFeedComponent = () => (
     <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-stone-800 text-2xl">
           Trending for <span className={UT_ORANGE_TEXT}>{selectedEvent?.artist}</span>
         </h3>
-        {/* Optional: Close button if you want to reset */}
         <button onClick={() => setOutfitFeed([])} className="text-stone-400 hover:text-stone-600">
             <X className="w-5 h-5"/>
         </button>
@@ -371,8 +401,8 @@ const OutfitRecommender = ({ events = [] }) => {
               alt={img.title}
               loading="lazy"
               className="w-full h-auto object-cover transition-opacity duration-700 opacity-0 data-[loaded=true]:opacity-100"
-              onLoad={(e) => e.target.setAttribute('data-loaded', 'true')}
-              onError={(e) => { e.target.style.display = 'none'; }} 
+              onLoad={(e) => (e.target as HTMLImageElement).setAttribute('data-loaded', 'true')}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} 
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
@@ -391,23 +421,17 @@ const OutfitRecommender = ({ events = [] }) => {
     <div className="min-h-screen bg-stone-50 font-sans pb-20">
       <div className="max-w-7xl mx-auto px-6 py-12">
         
-        {/* --- HEADER --- */}
         <div className="mb-10 text-center lg:text-left">
           <h2 className="text-6xl md:text-7xl lg:text-8xl font-black italic tracking-tighter uppercase leading-none text-black">
             FIT CHECK
           </h2>
         </div>
 
-        {/* --- MAIN GRID LAYOUT --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           
-          {/* --- LEFT COLUMN: CONTROLS (Sticky) --- */}
           <div className="lg:col-span-5 lg:sticky lg:top-8 space-y-6">
-            
-            {/* 1. Event Selector */}
             <EventSelector />
 
-            {/* 2. Action Card (UPLOAD ONLY) */}
             <div className="bg-white rounded-3xl border border-stone-200 p-2 shadow-sm">
                 <div className="p-6 space-y-4">
                     <div 
@@ -430,7 +454,6 @@ const OutfitRecommender = ({ events = [] }) => {
                 </div>
             </div>
 
-            {/* Weather Widget */}
              {weather && (
                 <div className="bg-white border border-stone-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
                     <div className="bg-orange-50 p-3 rounded-full text-[#BF5700]">
@@ -446,20 +469,17 @@ const OutfitRecommender = ({ events = [] }) => {
             )}
           </div>
 
-          {/* --- RIGHT COLUMN: RESULTS / FEED --- */}
           <div className="lg:col-span-7">
             
-            {/* A. Loading State */}
             {loading && (
               <div className="h-96 flex flex-col items-center justify-center bg-white rounded-3xl border border-stone-100 shadow-sm">
-                <div className={`inline-block animate-spin rounded-full h-12 w-12 border-[5px] border-stone-200 border-t-[#BF5700]`}></div>
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-[5px] border-stone-200 border-t-[#BF5700]"></div>
                 <p className="mt-4 text-stone-800 font-bold text-lg animate-pulse">
                   {mode === 'feed' ? 'Curating Looks...' : 'Consulting the Stylist...'}
                 </p>
               </div>
             )}
 
-            {/* B. Analysis Results (When Uploaded) */}
             {!loading && mode === 'upload' && uploadedImage && (
               <div className="space-y-6">
                  <div className="relative group rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-stone-100">
@@ -475,12 +495,10 @@ const OutfitRecommender = ({ events = [] }) => {
               </div>
             )}
 
-            {/* C. Outfit Feed */}
             {!loading && mode === 'feed' && outfitFeed.length > 0 && (
-                <OutfitFeed />
+                <OutfitFeedComponent />
             )}
 
-            {/* D. Empty State (Get Inspiration CTA) */}
             {!loading && !uploadedImage && outfitFeed.length === 0 && (
                 <div className="h-full min-h-[500px] flex flex-col items-center justify-center border-2 border-dashed border-stone-200 rounded-3xl bg-stone-50/50 p-12 text-center group hover:border-[#BF5700]/50 transition-colors">
                     <div className="bg-white p-6 rounded-full shadow-sm mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -503,7 +521,6 @@ const OutfitRecommender = ({ events = [] }) => {
           </div>
         </div>
 
-        {/* --- LIVE CAMERA MODAL (Global Overlay) --- */}
         {isCameraOpen && (
           <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center animate-in fade-in duration-200">
             <button
