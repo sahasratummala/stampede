@@ -1,9 +1,9 @@
-
-import { MOCK_BUDDIES, CONCERT_MOODS, AVAILABLE_PROMPTS } from '@/constants';
+import { CONCERT_MOODS, AVAILABLE_PROMPTS } from '@/constants';
 import { User, UserPrompt } from '../../types';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useUser } from '../../components/UserContent';
 import { getAllEventNames, generateBuddyResponse } from '../../geminiService';
+import { supabase } from "@/lib/supabase";
 
 interface Message {
   id: string;
@@ -26,6 +26,10 @@ const BuddyFinder: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
+  // Supabase buddies state
+  const [buddies, setBuddies] = useState<User[]>([]);
+  const [isLoadingBuddies, setIsLoadingBuddies] = useState(true);
+
   // Dropdown States
   const [availableEvents, setAvailableEvents] = useState<string[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
@@ -46,6 +50,72 @@ const BuddyFinder: React.FC = () => {
 
   // Helper for unique IDs
   const generateMsgId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+  // Fetch buddies from Supabase
+  useEffect(() => {
+    const fetchBuddies = async () => {
+      setIsLoadingBuddies(true);
+      try {
+        const { data, error } = await supabase
+          .from('buddies')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching buddies:', error);
+          return;
+        }
+
+        if (data) {
+          // Transform Supabase data to User type
+          const transformedBuddies: User[] = data.map(buddy => ({
+            id: buddy.id,
+            name: buddy.name,
+            pronouns: buddy.pronouns || undefined,
+            age: buddy.age || undefined,
+            major: buddy.major,
+            photo: buddy.photo,
+            bio: buddy.bio,
+            interests: buddy.interests,
+            attendingEvent: buddy.attending_event,
+            concertMood: buddy.concert_mood as any || undefined,
+            topArtists: buddy.top_artists,
+            prompts: buddy.prompts as UserPrompt[] || []
+          }));
+          
+          setBuddies(transformedBuddies);
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching buddies:', err);
+      } finally {
+        setIsLoadingBuddies(false);
+      }
+    };
+
+    fetchBuddies();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('buddies-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'buddies'
+        },
+        (payload) => {
+          console.log('Buddy data changed:', payload);
+          // Refetch buddies when data changes
+          fetchBuddies();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Fetch real events for the dropdown
   useEffect(() => {
@@ -98,9 +168,6 @@ const BuddyFinder: React.FC = () => {
       setView(newView);
     }
   };
-
-  // Expanded and randomized response logic
-  // Removed: getDynamicReplies - now using AI-powered responses via generateBuddyResponse
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !chattingWith) return;
@@ -177,11 +244,11 @@ const BuddyFinder: React.FC = () => {
   const [filterMajor, setFilterMajor] = useState<string>('');
   const [filterInterest, setFilterInterest] = useState<string>('');
 
-  const uniqueEvents = useMemo(() => Array.from(new Set(MOCK_BUDDIES.map(b => b.attendingEvent))), []);
-  const uniqueMajors = useMemo(() => Array.from(new Set(MOCK_BUDDIES.map(b => b.major))), []);
+  const uniqueEvents = useMemo(() => Array.from(new Set(buddies.map(b => b.attendingEvent))), [buddies]);
+  const uniqueMajors = useMemo(() => Array.from(new Set(buddies.map(b => b.major))), [buddies]);
 
   const filteredBuddies = useMemo(() => {
-    return MOCK_BUDDIES.filter(buddy => {
+    return buddies.filter(buddy => {
       const matchEvent = !filterEvent || buddy.attendingEvent === filterEvent;
       const matchMajor = !filterMajor || buddy.major === filterMajor;
       const matchInterest = !filterInterest ||
@@ -189,7 +256,7 @@ const BuddyFinder: React.FC = () => {
         buddy.topArtists.some(a => a.toLowerCase().includes(filterInterest.toLowerCase()));
       return matchEvent && matchMajor && matchInterest;
     });
-  }, [filterEvent, filterMajor, filterInterest]);
+  }, [buddies, filterEvent, filterMajor, filterInterest]);
 
   useEffect(() => {
     setCurrentIndex(0);
@@ -342,6 +409,18 @@ const BuddyFinder: React.FC = () => {
   };
 
   const currentUser = filteredBuddies[currentIndex];
+
+  // Show loading state
+  if (isLoadingBuddies) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 pt-8 pb-32 md:pt-12 md:pb-40 min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <i className="fas fa-circle-notch fa-spin text-burnt-orange text-4xl mb-4"></i>
+          <p className="text-gray-500 font-medium">Loading buddies...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 pt-8 pb-32 md:pt-12 md:pb-40 min-h-[calc(100vh-4rem)]">
@@ -678,4 +757,4 @@ const BuddyFinder: React.FC = () => {
   );
 };
 
-export default BuddyFinder; 
+export default BuddyFinder;
