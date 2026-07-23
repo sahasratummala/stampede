@@ -24,10 +24,19 @@ export default function EventCalendar({ initialEvents = [] }: { initialEvents?: 
         setMounted(true);
     }, []);
 
+    const today = new Date();
+    const isViewingCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+
     const nextMonth = () => {
         const next = new Date(currentDate);
         next.setMonth(currentDate.getMonth() + 1);
         setCurrentDate(next);
+    };
+
+    const prevMonth = () => {
+        const prev = new Date(currentDate);
+        prev.setMonth(currentDate.getMonth() - 1);
+        setCurrentDate(prev);
     };
 
     const filteredEvents = safeEvents.filter((event) => {
@@ -50,6 +59,9 @@ export default function EventCalendar({ initialEvents = [] }: { initialEvents?: 
 
                 {!search ? (
                     <div className="flex items-center gap-8 select-none">
+                        {!isViewingCurrentMonth && (
+                            <button onClick={prevMonth} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] transition-colors uppercase tracking-[0.2em]">PREVIOUS</button>
+                        )}
                         <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-[var(--foreground)]">{monthLabel}</h2>
                         <button onClick={nextMonth} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] transition-colors uppercase tracking-[0.2em]">NEXT</button>
                     </div>
