@@ -11,34 +11,31 @@ export default function RoleSelection() {
   const setRole = async (role: "artist" | "listener") => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         router.push("/");
         return;
       }
 
-      // 1. Save role to the 'profiles' table 
-      // Upsert ensures we don't get "duplicate key" errors if they click twice
-      const { error } = await supabase
-        .from("profiles")
-        .upsert([{ 
-          id: user.id, 
+      const { error } = await supabase.from("profiles").upsert([
+        {
+          id: user.id,
           role: role,
           email: user.email,
-          updated_at: new Date()
-        }]);
+          updated_at: new Date(),
+        },
+      ]);
 
       if (error) throw error;
 
-      // 2. Hand off to the Smart Dashboard
-      // The logic in /texas-talent/page.tsx will now detect this role 
-      // and show the specific signup form (Artist vs Listener)
-      router.push("/texas-talent");
-      
-    } catch (error: any) {
-      console.error("Error setting role:", error.message);
-      alert("Failed to set role: " + error.message);
+      router.push("/profile?new=1");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("Error setting role:", message);
+      alert("Failed to set role: " + message);
     } finally {
       setLoading(false);
     }
@@ -69,9 +66,8 @@ export default function RoleSelection() {
         </header>
 
         <div className="flex flex-col gap-6">
-          {/* Artist Card */}
-          <button 
-            onClick={() => setRole('artist')} 
+          <button
+            onClick={() => setRole("artist")}
             className="w-full bg-zinc-950 border-2 border-zinc-900 p-8 rounded-[2.5rem] hover:border-orange-600 hover:bg-orange-600/5 group transition-all flex items-center gap-6 shadow-2xl text-left"
           >
             <div className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 shadow-lg shadow-orange-600/20">
@@ -83,9 +79,8 @@ export default function RoleSelection() {
             </div>
           </button>
 
-          {/* Listener Card */}
-          <button 
-            onClick={() => setRole('listener')} 
+          <button
+            onClick={() => setRole("listener")}
             className="w-full bg-zinc-950 border-2 border-zinc-900 p-8 rounded-[2.5rem] hover:border-white hover:bg-white/5 group transition-all flex items-center gap-6 shadow-2xl text-left"
           >
             <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 border border-white/5">

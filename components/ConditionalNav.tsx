@@ -8,7 +8,7 @@ export default function ConditionalNav() {
   // List the pages where the NavBar should be HIDDEN
   const hiddenRoutes = ["/", "/onboarding/role"];
   
-  if (hiddenRoutes.includes(pathname)) {
+  if (hiddenRoutes.includes(pathname) || pathname.startsWith("/auth/")) {
     return null; // Don't render anything on the landing or role selection pages
   }
 

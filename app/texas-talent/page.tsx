@@ -1,256 +1,191 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { 
-  Loader2, 
-  User, 
-  Pencil, 
-  LayoutDashboard, 
-  ChevronDown, 
-  ChevronUp, 
-  Music,
-  Calendar
-} from "lucide-react";
 import { useRouter } from "next/navigation";
-
-import ArtistProfileCreator from "@/components/ArtistProfileCreator"; 
-import ArtistPublicProfile from "@/components/ArtistPublicProfile";
-import ListenerSetupForm from "@/components/ListenerSetupForm";
-import MediaPostCreator from "@/components/MediaPostCreator";
+import { Calendar, Loader2, Music, Sparkles } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import EventCreator from "@/components/EventCreator";
+import MediaPostCreator from "@/components/MediaPostCreator";
 
-export default function SmartProfile() {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [hasProfile, setHasProfile] = useState(false);
-  const [profileData, setProfileData] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false); 
-  
-  const [followedArtists, setFollowedArtists] = useState<any[]>([]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+type Role = "artist" | "listener";
+interface ArtistSummary {
+  id: string;
+  name: string;
+  profileImageUrl?: string;
+  genre?: string;
+}
+
+export default function TexasTalentPage() {
   const router = useRouter();
-
-  const checkUser = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    setUser(user);
-
-    const { data: userProfile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!userProfile) {
-      router.push("/onboarding/role");
-      return;
-    }
-    setRole(userProfile.role);
-
-    const table = userProfile.role === "artist" ? "artists" : "listeners";
-    const { data: existingData } = await supabase
-      .from(table)
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (existingData) {
-      setHasProfile(true);
-      setProfileData(existingData);
-      
-      if (userProfile.role === "listener") {
-        await fetchFollowedArtists(user.id);
-      }
-    }
-    setLoading(false);
-  };
-
-  const fetchFollowedArtists = async (userId: string) => {
-    try {
-      const { data: follows, error: followError } = await supabase
-        .from('follows')
-        .select('artist_id')
-        .eq('follower_id', userId);
-
-      if (followError) throw followError;
-
-      if (follows && follows.length > 0) {
-        const artistIds = follows.map(f => f.artist_id);
-        const { data: artists, error: artistError } = await supabase
-          .from('artists')
-          .select('id, name, profileImageUrl, genre')
-          .in('id', artistIds);
-
-        if (artistError) throw artistError;
-        setFollowedArtists(artists || []);
-      }
-    } catch (err) {
-      console.error("Error fetching followed artists:", err);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [followedArtists, setFollowedArtists] = useState<ArtistSummary[]>([]);
 
   useEffect(() => {
-    checkUser();
-  }, []);
+    const loadPage = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center transition-colors duration-300">
-      <Loader2 className="animate-spin text-accent w-12 h-12" />
-      <p className="text-muted font-bold uppercase tracking-widest text-xs mt-4">Syncing...</p>
-    </div>
-  );
+      if (!user) {
+        router.replace("/");
+        return;
+      }
 
-  // ARTIST FLOW
+      const { data: accountProfile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!accountProfile?.role) {
+        router.replace("/onboarding/role");
+        return;
+      }
+
+      const nextRole = accountProfile.role as Role;
+      const profileTable = nextRole === "artist" ? "artists" : "listeners";
+      const { data: completedProfile } = await supabase
+        .from(profileTable)
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (!completedProfile) {
+        router.replace("/profile?new=1");
+        return;
+      }
+
+      setUserId(user.id);
+      setRole(nextRole);
+
+      if (nextRole === "listener") {
+        const { data: follows } = await supabase
+          .from("follows")
+          .select("artist_id")
+          .eq("follower_id", user.id);
+
+        const artistIds = follows?.map((follow) => follow.artist_id) ?? [];
+        if (artistIds.length > 0) {
+          const { data: artists } = await supabase
+            .from("artists")
+            .select("id, name, profileImageUrl, genre")
+            .in("id", artistIds);
+          setFollowedArtists(artists ?? []);
+        }
+      }
+
+      setLoading(false);
+    };
+
+    loadPage();
+  }, [router]);
+
+  if (loading || !role || !userId) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-accent" />
+        <p className="mt-4 text-xs font-bold uppercase tracking-widest text-muted">Loading Texas Talent...</p>
+      </div>
+    );
+  }
+
   if (role === "artist") {
-    if (isEditing) {
-      return (
-        <ArtistProfileCreator 
-          initialData={profileData} 
-          onComplete={() => {
-            setIsEditing(false);
-            checkUser(); 
-          }} 
-        />
-      );
-    }
-
-    if (!hasProfile) {
-      return <ArtistProfileCreator onComplete={checkUser} />;
-    }
-
     return (
-      <div className="relative bg-background min-h-screen overflow-x-hidden transition-colors duration-300">
-         <section className="relative z-0 border-b border-border pb-16">
-            <ArtistPublicProfile userId={user.id} /> 
-         </section>
-         
-         <section className="max-w-4xl mx-auto px-6 py-24 relative z-10 bg-background">
-            <div className="flex items-center gap-4 mb-10">
-               <div className="bg-accent p-3 rounded-2xl shadow-lg shadow-accent/20">
-                  <LayoutDashboard size={24} className="text-white" />
-               </div>
-               <div>
-                  <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none text-foreground">Artist Studio</h2>
-                  <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Manage your herd's content</p>
-               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-12">
-               <MediaPostCreator artistId={user.id} />
-               
-               <div className="border-t border-border pt-12">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Calendar className="text-accent" size={20} />
-                    <h3 className="text-xl font-black italic uppercase text-foreground">Tour Dates</h3>
-                  </div>
-                  <EventCreator artistId={user.id} />
-               </div>
-            </div>
-         </section>
+      <main className="min-h-screen bg-background px-6 py-16 text-foreground">
+        <div className="mx-auto max-w-4xl">
+          <header className="mb-12">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-accent">Texas Talent</p>
+            <h1 className="mt-2 text-5xl font-black uppercase italic tracking-tighter">Artist Studio</h1>
+            <p className="mt-3 max-w-xl text-muted">
+              Publish music, media, and show dates for listeners to discover.
+            </p>
+          </header>
 
-         <div className="fixed top-6 right-6 z-[100]">
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="bg-foreground text-background p-4 rounded-full hover:bg-accent hover:text-white transition-all shadow-2xl flex items-center justify-center"
-            >
-              <Pencil size={20} />
-            </button>
-         </div>
-      </div>
-    );
-  }
-
-  // LISTENER FLOW
-  if (role === "listener") {
-    if (!hasProfile) {
-      return <ListenerSetupForm onComplete={checkUser} />;
-    }
-
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6 transition-colors duration-300">
-        <div className="max-w-2xl w-full bg-card rounded-[3.5rem] p-12 border border-border relative shadow-2xl">
-          
-          {/* UPDATED: Displays user profile image or fallback gradient */}
-          <div className="w-24 h-24 bg-card rounded-[2rem] mb-8 shadow-xl shadow-accent/20 overflow-hidden border border-border flex items-center justify-center">
-            {profileData.profileImageUrl ? (
-              <img 
-                src={profileData.profileImageUrl} 
-                className="w-full h-full object-cover" 
-                alt={profileData.name} 
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center">
-                <User size={48} className="text-white" />
+          <div className="grid gap-12">
+            <section className="rounded-[2.5rem] border border-border bg-card p-6 md:p-10">
+              <div className="mb-6 flex items-center gap-3">
+                <Music className="text-accent" size={20} />
+                <h2 className="text-xl font-black uppercase italic">Media drops</h2>
               </div>
-            )}
+              <MediaPostCreator artistId={userId} />
+            </section>
+
+            <section className="rounded-[2.5rem] border border-border bg-card p-6 md:p-10">
+              <div className="mb-6 flex items-center gap-3">
+                <Calendar className="text-accent" size={20} />
+                <h2 className="text-xl font-black uppercase italic">Tour dates</h2>
+              </div>
+              <EventCreator artistId={userId} />
+            </section>
           </div>
-          
-          <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-2 text-foreground">{profileData.name}</h1>
-          <p className="text-accent font-bold uppercase tracking-[0.3em] text-xs mb-6">{profileData.major}</p>
-          <p className="text-muted text-xl leading-relaxed mb-10 font-medium italic opacity-80">{profileData.bio}</p>
-          
-          <div className="mb-10 bg-background rounded-3xl border border-border overflow-hidden">
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-card transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Music size={14} className="text-accent" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
-                  Your Liked Artists ({followedArtists.length})
-                </span>
-              </div>
-              {isMenuOpen ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
-            </button>
-
-            {isMenuOpen && (
-              <div className="px-4 pb-4 max-h-60 overflow-y-auto custom-scrollbar">
-                {followedArtists.length === 0 ? (
-                  <p className="text-[10px] text-muted font-bold uppercase tracking-widest p-4 text-center">No artists liked yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2">
-                    {followedArtists.map((artist) => (
-                      <div 
-                        key={artist.id}
-                        onClick={() => router.push(`/artist/${artist.id}`)}
-                        className="flex items-center gap-4 p-3 bg-card rounded-2xl border border-border hover:border-accent transition-all cursor-pointer group"
-                      >
-                        <img 
-                          src={artist.profileImageUrl} 
-                          className="w-10 h-10 rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all" 
-                          alt="" 
-                        />
-                        <div className="flex-1">
-                          <p className="text-xs font-black uppercase tracking-tight text-foreground group-hover:text-accent transition-colors">{artist.name}</p>
-                          <p className="text-[8px] text-muted font-bold uppercase tracking-widest">{artist.genre}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <button 
-            onClick={() => router.push("/discover")}
-            className="w-full bg-foreground text-background font-black py-5 rounded-[2rem] hover:bg-accent hover:text-white transition-all uppercase italic text-2xl tracking-tight shadow-xl"
-          >
-            Start Discovering
-          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
-  return null;
+  return (
+    <main className="min-h-screen bg-background px-6 py-16 text-foreground">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-12 flex flex-col justify-between gap-8 md:flex-row md:items-end">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-accent">Texas Talent</p>
+            <h1 className="mt-2 text-5xl font-black uppercase italic tracking-tighter">Find your next favorite</h1>
+            <p className="mt-3 max-w-xl text-muted">
+              Discover Austin artists matched to your taste and keep up with the ones you love.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/discover")}
+            className="flex items-center justify-center gap-3 rounded-2xl bg-foreground px-7 py-4 text-xs font-black uppercase tracking-[0.2em] text-background transition-colors hover:bg-accent hover:text-white"
+          >
+            <Sparkles size={17} />
+            Discover Artists
+          </button>
+        </header>
+
+        <section>
+          <h2 className="mb-6 text-xs font-black uppercase tracking-[0.3em] text-muted">
+            Artists you follow
+          </h2>
+          {followedArtists.length === 0 ? (
+            <div className="rounded-[2.5rem] border-2 border-dashed border-border px-6 py-20 text-center">
+              <Music className="mx-auto mb-4 text-muted" size={38} />
+              <p className="font-black uppercase italic text-muted">Your lineup is waiting</p>
+              <p className="mt-2 text-sm text-muted">Start discovering artists to build your list.</p>
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {followedArtists.map((artist) => (
+                <button
+                  key={artist.id}
+                  onClick={() => router.push(`/artist/${artist.id}`)}
+                  className="group flex items-center gap-4 rounded-[2rem] border border-border bg-card p-5 text-left transition-all hover:-translate-y-1 hover:border-accent"
+                >
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-background">
+                    {artist.profileImageUrl ? (
+                      <img
+                        src={artist.profileImageUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Music className="m-auto mt-5 text-muted" size={24} />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-black uppercase italic group-hover:text-accent">{artist.name}</p>
+                    <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-widest text-muted">
+                      {artist.genre}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
 }

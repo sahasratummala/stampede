@@ -16,9 +16,7 @@ export default function EventCalendar({ initialEvents = [] }: { initialEvents?: 
 
     // --- CALENDAR LOGIC ---
     const safeEvents = Array.isArray(initialEvents) ? initialEvents : [];
-    const startDate = safeEvents.length > 0 ? new Date(safeEvents[0].date + 'T12:00:00') : new Date();
-
-    const [currentDate, setCurrentDate] = useState(startDate);
+    const [currentDate, setCurrentDate] = useState(() => new Date());
     const [search, setSearch] = useState('');
     const [hostFilter, setHostFilter] = useState('All');
 
@@ -30,12 +28,6 @@ export default function EventCalendar({ initialEvents = [] }: { initialEvents?: 
         const next = new Date(currentDate);
         next.setMonth(currentDate.getMonth() + 1);
         setCurrentDate(next);
-    };
-
-    const prevMonth = () => {
-        const prev = new Date(currentDate);
-        prev.setMonth(currentDate.getMonth() - 1);
-        setCurrentDate(prev);
     };
 
     const filteredEvents = safeEvents.filter((event) => {
@@ -58,7 +50,6 @@ export default function EventCalendar({ initialEvents = [] }: { initialEvents?: 
 
                 {!search ? (
                     <div className="flex items-center gap-8 select-none">
-                        <button onClick={prevMonth} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] transition-colors uppercase tracking-[0.2em]">PREV</button>
                         <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-[var(--foreground)]">{monthLabel}</h2>
                         <button onClick={nextMonth} className="text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] transition-colors uppercase tracking-[0.2em]">NEXT</button>
                     </div>
