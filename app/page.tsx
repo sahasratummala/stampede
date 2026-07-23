@@ -9,37 +9,8 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const router = useRouter();
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("password-reset") === "success") {
-      const timer = window.setTimeout(
-        () => setAuthMessage("Password updated. Sign in with your new password."),
-        0
-      );
-      return () => window.clearTimeout(timer);
-    }
-  }, []);
-
-  const handlePasswordReset = async () => {
-    if (!email) {
-      setAuthMessage("Enter your email address first.");
-      return;
-    }
-
-    setResetLoading(true);
-    setAuthMessage("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
-    setResetLoading(false);
-
-    setAuthMessage(
-      error ? error.message : "Reset link sent. Check your inbox to choose a new password."
-    );
-  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,16 +106,6 @@ export default function LandingPage() {
         >
           {isSignUp ? "Already have an account? Login" : "New user? Join the herd"}
         </button>
-
-        {!isSignUp && (
-          <button
-            onClick={handlePasswordReset}
-            disabled={resetLoading}
-            className="w-full mt-3 text-[10px] text-zinc-500 font-black uppercase tracking-widest hover:text-orange-600 transition-colors"
-          >
-            {resetLoading ? "Sending reset link..." : "Forgot password?"}
-          </button>
-        )}
       </div>
     </div>
   );
